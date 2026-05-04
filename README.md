@@ -121,8 +121,10 @@ chmod +x korusSIGNAL.py korusDECODE.py
 - numpy  
 - pandas  
 - scikit-learn  
-- matplotlib  
-- btllib  
+- matplotlib
+- plotly
+- btllib
+- gzip 
 - ntEdit / ntStat compatible Bloom filter ecosystem  
 
 ---
