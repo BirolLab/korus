@@ -53,12 +53,12 @@ The framework is composed of:
 
 Key steps:
 
--Query per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
--Map k-mer hits to ancestry-informative SNVs
--Compute allele-specific support (REF vs ALT k-mers)
--Derive normalized directional signal per locus
--Aggregate signals into fixed genomic windows
--Construct a sample × window feature matrix
+- Query per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
+- Map k-mer hits to ancestry-informative SNVs
+- Compute allele-specific support (REF vs ALT k-mers)
+- Derive normalized directional signal per locus
+- Aggregate signals into fixed genomic windows
+- Construct a sample × window feature matrix
 
 Output: continuous genomic feature matrix across samples and windows
 
@@ -68,25 +68,25 @@ The DECODE stage performs probabilistic inference of ancestry from the feature m
 
 Core steps:
 
--Standardization of the feature matrix
--Dimensionality reduction (PCA) into latent space
--Distance-based classification (e.g., Mahalanobis)
--Probability calibration (softmax)
--Optional unsupervised clustering (KMeans)
--Spatial smoothing via HMM / Viterbi decoding
+- Standardization of the feature matrix
+- Dimensionality reduction (PCA) into latent space
+- Distance-based classification (e.g., Mahalanobis)
+- Probability calibration (softmax)
+- Optional unsupervised clustering (KMeans)
+- Spatial smoothing via HMM / Viterbi decoding
 
 Output:
 
--Global ancestry fractions
--Local ancestry assignments
--Posterior probability matrices
--Smoothed ancestry trajectories across the genome
--Conceptual Model
+- Global ancestry fractions
+- Local ancestry assignments
+- Posterior probability matrices
+- Smoothed ancestry trajectories across the genome
+- Conceptual Model
 
 Sequencing Data
-> k-mer Bloom Filter Space
-> MATRIX (windowed genomic feature representation)
-> DECODE (latent ancestry reconstruction)
+- k-mer Bloom Filter Space
+- MATRIX (windowed genomic feature representation)
+- DECODE (latent ancestry reconstruction)
 
 ---
 
