@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 
 import sys
 
+import gzip
+import io
+
 # -------------------------
 # Tee logger: duplicate stdout to file
 # -------------------------
@@ -32,11 +35,22 @@ class Tee:
         self.stdout.flush()
 
 # -------------------------
+# Support gzip
+# -------------------------
+def open_maybe_gz(path):
+    """
+    Open plain text or gz/bgz files as a text stream.
+    """
+    if path.endswith((".gz", ".bgz", ".gzip")):
+        return io.TextIOWrapper(gzip.open(path, "rb"), encoding="utf-8")
+    return open(path, "r")
+
+# -------------------------
 # Load reference matrix
 # -------------------------
 def load_reference_matrix(path):
     # Load TSV with chromosome as string (prevents numeric coercion)
-    df = pd.read_csv(path, sep="\t", dtype={"chr": str})
+    df = pd.read_csv(open_maybe_gz(path), sep="\t", dtype={"chr": str})
 
     # Extract window size from header (format: window_start:<size>)
     window_col = [c for c in df.columns if c.startswith("window_start")][0]
@@ -58,7 +72,7 @@ def load_reference_matrix(path):
 # -------------------------
 def load_sample_matrix(path):
     # Same logic as reference loader
-    df = pd.read_csv(path, sep="\t", dtype={"chr": str})
+    df = pd.read_csv(open_maybe_gz(path), sep="\t", dtype={"chr": str})
 
     window_col = [c for c in df.columns if c.startswith("window_start")][0]
     window_size = int(window_col.split(":")[1])
@@ -75,7 +89,7 @@ def load_sample_matrix(path):
 # -------------------------
 def load_labels(path):
     # Load label file (expects sample ↔ ancestry mapping)
-    labels = pd.read_csv(path, sep="\t")
+    labels = pd.read_csv(open_maybe_gz(path), sep="\t")
 
     # Normalize column names for robustness
     labels.columns = [c.strip().lower() for c in labels.columns]
