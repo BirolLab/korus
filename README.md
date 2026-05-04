@@ -38,60 +38,54 @@ Developed by René L Warren.
 
 ## Overview
 
-KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic signals encoded in Bloom filters.
+KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters.
 
-Instead of relying directly on alignment or variant calling, KORUS transforms sequencing data into a structured genomic signal field and performs probabilistic decoding to infer ancestry structure across the genome.
+Rather than relying on alignment or variant calling, KORUS projects sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome.
 
 The framework is composed of:
 
-- **SIGNAL stage**: construction of k-mer–derived genomic signal matrices  
-- **DECODE stage**: probabilistic inference of ancestry from signal space  
+-MATRIX stage: construction of k-mer–derived genomic feature matrices
+-DECODE stage: probabilistic inference of ancestry from feature space
+-Methodological Framework
+-MATRIX (korusMatrix.py)
 
----
-
-## Methodological Framework
-
-### SIGNAL (korusSIGNAL.py)
-
-The SIGNAL stage converts raw Bloom-filter–encoded sequencing data into a structured genomic signal representation.
+### The MATRIX stage transforms Bloom filter–encoded sequencing data into a structured genomic feature representation.
 
 Key steps:
-- Query per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
-- Map k-mer hits to ancestry-informative SNVs
-- Compute allele-specific support (REF vs ALT k-mers)
-- Normalize directional signal
-- Aggregate signals into fixed genomic windows
-- Output sample × window signal matrix
 
-Output: continuous genomic signal matrix per sample.
+-Query per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
+-Map k-mer hits to ancestry-informative SNVs
+-Compute allele-specific support (REF vs ALT k-mers)
+-Derive normalized directional signal per locus
+-Aggregate signals into fixed genomic windows
+-Construct a sample × window feature matrix
 
----
+Output: continuous genomic feature matrix across samples and windows
 
-### DECODE (korusDECODE.py)
+### DECODE (korusDecode.py)
 
-The DECODE stage performs probabilistic inference of ancestry from the signal matrix.
+The DECODE stage performs probabilistic inference of ancestry from the feature matrix.
 
 Core steps:
-- Standardization of signal matrix
-- PCA embedding into latent space
-- Gaussian / Mahalanobis classification
-- Softmax probability calibration
-- Optional KMeans clustering (unsupervised mode)
-- HMM / Viterbi smoothing across windows
+
+-Standardization of the feature matrix
+-Dimensionality reduction (PCA) into latent space
+-Distance-based classification (e.g., Mahalanobis)
+-Probability calibration (softmax)
+-Optional unsupervised clustering (KMeans)
+-Spatial smoothing via HMM / Viterbi decoding
 
 Output:
-- Global ancestry fractions
-- Local ancestry states
-- Posterior probability matrices
-- Smoothed ancestry trajectories
 
----
+-Global ancestry fractions
+-Local ancestry assignments
+-Posterior probability matrices
+-Smoothed ancestry trajectories across the genome
+-Conceptual Model
 
-## Conceptual Model
-
-Sequencing Data  
-> k-mer Bloom Filter Space  
-> SIGNAL (windowed genomic signal field)  
+Sequencing Data
+> k-mer Bloom Filter Space
+> MATRIX (windowed genomic feature representation)
 > DECODE (latent ancestry reconstruction)
 
 ---
@@ -120,16 +114,16 @@ chmod +x korusSIGNAL.py korusDECODE.py
 
 ## Usage
 
-### 1. SIGNAL stage
+### 1. MATRIX stage
 
 ```bash
-korusSIGNAL.py   --bf_dir /path/to/bloom_filters   --snv_kmers snv_kmers.tsv   --output_matrix signal_matrix.tsv   --window_size 500000   --k 55
+korusMatrix.py   --bf_dir /path/to/bloom_filters   --snv_kmers snv_kmers.tsv   --output_matrix signal_matrix.tsv   --window_size 500000   --k 55
 ```
 
 ### 2. DECODE stage
 
 ```bash
-korusDECODE.py   --ref reference_matrix.tsv   --sample signal_matrix.tsv   --labels reference_labels.tsv   --k 5   --outprefix korus_run
+korusDecode.py   --ref reference_matrix.tsv   --sample signal_matrix.tsv   --labels reference_labels.tsv   --k 5   --outprefix korus_run
 ```
 
 ---
@@ -191,8 +185,8 @@ ERR2     AFR
 ## Demo
 
 ```bash
-./korusSIGNAL.py --help
-./korusDECODE.py --help
+./korusMatrix.py --help
+./korusDecode.py --help
 ```
 
 ---
