@@ -199,7 +199,7 @@ ERR2     AFR
 
 ## Citing
 
-TBD (please cite framework once published)
+TBD 
 
 ---
 
