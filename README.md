@@ -161,12 +161,12 @@ ERR2     AFR
 ## Outputs
 
 ### Global outputs
-- ancestry_fractions.tsv  
-- posterior_probabilities.tsv  
+- .lai_summary.tsv
+- .ancestry_fractions.tsv  
+- .posterior_probabilities.tsv  
 
 ### Local ancestry outputs
-- *.lai.tsv  
-- *.lai_smoothed.tsv  
+- .SAMPLE.lai.tsv   
 
 ### Visualizations
 - PCA plots  
