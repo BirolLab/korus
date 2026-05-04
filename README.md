@@ -7,7 +7,8 @@
 # KORUS
 
 K-mer Orthogonal Representation for Unified Stratification (of ancestry)  
-K-mer Orthogonal Representation of Unseen Structure  
+
+KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning clusters via Mahalanobis distance with softmax probabilities, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions.
 
 ## Feature Matrix → Probabilistic Decode Framework for Genomic Ancestry Inference
 
@@ -15,18 +16,25 @@ K-mer Orthogonal Representation of Unseen Structure
 
 ## Contents
 
-1. [Credit](#credit)  
-2. [Overview](#overview)  
-3. [Methodological Framework](#methodological-framework)  
-4. [Installation](#installation)  
-5. [Dependencies](#dependencies)  
-6. [Usage](#usage)  
-7. [Inputs](#inputs)  
-8. [Outputs](#outputs)  
-9. [Workflow Overview](#workflow-overview)  
-10. [Demo](#demo)  
-11. [Citing](#citing)  
-12. [License](#license)  
+1. [Synopsis](#synopsis)
+2. [Credit](#credit)  
+3. [Overview](#overview)  
+4. [Methodological Framework](#methodological-framework)  
+5. [Installation](#installation)  
+6. [Dependencies](#dependencies)  
+7. [Usage](#usage)  
+8. [Inputs](#inputs)  
+9. [Outputs](#outputs)  
+10. [Workflow Overview](#workflow-overview)  
+11. [Demo](#demo)  
+12. [Citing](#citing)  
+13. [License](#license)  
+
+---
+
+## Synopsis <a name="synopsis"></a>
+
+KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigns each window to reference clusters via Mahalanobis distance in PCA-reduced feature space with softmax-derived probabilities, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions.
 
 ---
 
