@@ -4,6 +4,19 @@ import re
 import argparse
 from collections import defaultdict
 import btllib
+import gzip
+
+# ----------------------
+# OPEN KMER FILE
+# ----------------------
+def open_kmer_file(path):
+    """
+    Supports plain text, .gz/.bgz (gzip/bgzip) archives.
+    """
+    if path.endswith((".gz", ".bgz", ".gzip")):
+        return gzip.open(path, "rt")
+
+    return open(path, "r")
 
 # ----------------------
 # ARGUMENT PARSING
@@ -45,7 +58,7 @@ snv_alleles = {}
 snv_window = {}
 windows_set = set()
 
-with open(KMER_FILE) as f:
+with open_kmer_file(KMER_FILE) as f:
     for line in f:
         chr_, pos, allele, kmer = line.strip().split()
         key = (chr_, pos)
