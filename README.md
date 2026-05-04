@@ -132,22 +132,22 @@ chmod +x korusSIGNAL.py korusDECODE.py
 ### 1. MATRIX stage
 
 ```bash
-./korusMatrix.py \\
-  --bf_dir /path/to/bloom_filters \\
-  --snv_kmers snv_kmers.tsv \\
-  --output_matrix sampleMatrix.tsv \\
-  --window_size 500000 \\
+./korusMatrix.py 
+  --bf_dir /path/to/bloom_filters 
+  --snv_kmers snv_kmers.tsv 
+  --output_matrix sampleMatrix.tsv 
+  --window_size 500000 
   --k 55
 ```
 
 ### 2. DECODE stage
 
 ```bash
-./korusDecode.py \\
-  --ref korusModelMatrixk55.tsv \\
-  --sample sampleMatrix.tsv \\
-  --labels korusModelLabels.tsv \\
-  --k 5 \\
+./korusDecode.py 
+  --ref korusModelMatrixk55.tsv 
+  --sample sampleMatrix.tsv 
+  --labels korusModelLabels.tsv 
+  --k 5 
   --outprefix korus_run
 ```
 
