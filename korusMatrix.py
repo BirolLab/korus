@@ -111,3 +111,4 @@ with open(OUTPUT_MATRIX, "w") as out:
         out.write(f"{chr_}\t{win_start}\t" + "\t".join(row) + "\n")
 
 print(f"Done! Matrix written to {OUTPUT_MATRIX}")
+

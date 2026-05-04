@@ -15,6 +15,8 @@ import sys
 import gzip
 import io
 
+import plotly.express as px
+
 # -------------------------
 # Tee logger: duplicate stdout to file
 # -------------------------
@@ -233,6 +235,100 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
     plt.tight_layout()
     plt.savefig(f"{outprefix}.pca.png", dpi=300)
     print(f"\tWriting PCA plot to: {outprefix}.pca.png")
+
+# -------------------------
+# Interactive PCA Plot (3D)
+# -------------------------
+def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
+
+    # Same color logic as 2D plot
+    color_map = {
+        "AFR": "orange",
+        "EUR": "green",
+        "EAS": "red",
+        "AMR": "black",
+        "SAS": "blue",
+        "OCE": "lightgreen",
+        "CAS": "violet",
+        "query": "cyan",
+        "NA": "grey"
+    }
+
+    # Standardize
+    scaler = StandardScaler()
+    X_ref_scaled = scaler.fit_transform(X_ref)
+    X_sample_scaled = scaler.transform(X_sample)
+
+    # PCA
+    pca = PCA(n_components=3)
+    X_ref_pca = pca.fit_transform(X_ref_scaled)
+    X_sample_pca = pca.transform(X_sample_scaled)
+
+    # Build dataframe for plotting
+    df_list = []
+
+    # Reference samples
+    for i in range(X_ref_pca.shape[0]):
+        if labels is not None:
+            anc = labels.iloc[i]["ancestry"]
+        else:
+            anc = "REF"
+
+        df_list.append({
+            "PC1": X_ref_pca[i, 0],
+            "PC2": X_ref_pca[i, 1],
+            "PC3": X_ref_pca[i, 2],
+            "label": anc,
+            "type": "reference",
+            "name": labels.index[i] if labels is not None else f"ref_{i}"
+        })
+
+    # Query samples
+    for i in range(X_sample_pca.shape[0]):
+        df_list.append({
+            "PC1": X_sample_pca[i, 0],
+            "PC2": X_sample_pca[i, 1],
+            "PC3": X_sample_pca[i, 2],
+            "label": "query",
+            "type": "query",
+            "name": sample_names[i]
+        })
+
+    df = pd.DataFrame(df_list)
+
+    # Plotly interactive 3D scatter
+    fig = px.scatter_3d(
+        df,
+        x="PC1",
+        y="PC2",
+        z="PC3",
+        color="label",
+        symbol="type",
+        hover_name="name",
+        title="korus 3D PCA",
+        opacity=0.7,
+        color_discrete_map=color_map
+    )
+
+    # Make query points larger
+    fig.update_traces(marker=dict(size=5))
+    fig.update_layout(
+        legend=dict(
+            font=dict(size=14),
+            itemsizing="constant"
+        )
+    )
+
+    fig.update_traces(
+        selector=dict(mode="markers", name="query"),
+        marker=dict(size=9, symbol="x")
+    )
+
+    # Save as interactive HTML
+    outfile = f"{outprefix}.pca3d.html"
+    fig.write_html(outfile)
+
+    print(f"\tWriting interactive PCA plot to: {outfile}")
 
 # -------------------------
 # NEW: PCA Plot (3D)
@@ -642,7 +738,7 @@ def main():
     parser.add_argument("--window_radius", type=int, default=3)
     parser.add_argument("--require_full_window", action="store_true")
 
-    parser.add_argument("--stay_prob", type=float, default=0.97,help="HMM self-transition probability (smoothing strength)")
+    parser.add_argument("--stay_prob", type=float, default=0.99,help="HMM self-transition probability (smoothing strength)")
     parser.add_argument("--no_hmm", action="store_true", help="Disable HMM smoothing")
 
     args = parser.parse_args()
@@ -766,7 +862,7 @@ def main():
 
     # Generate plots
     plot_pca(X_ref_pca, labels, clusters, X_sample_pca, sample_names, args.outprefix)
-    plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, args.outprefix)
+    plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, args.outprefix)
 
 # -------------------------
 # ENTRY POINT
