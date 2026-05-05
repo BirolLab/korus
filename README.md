@@ -64,12 +64,12 @@ The framework consists of:
 Transforms Bloom filter–encoded sequencing data into a structured genomic feature representation.
 
 **Key steps:**
-- Query per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
-- Map k-mer hits to ancestry-informative SNVs
+- Build per-sample k-mer Bloom filters (ntEdit/ntStat compatible)
+- Query per-sample Bloom filters for ancestry-informative SNV k-mer membership 
 - Compute allele-specific support (REF vs ALT k-mers)
 - Derive normalized directional signal per locus
 - Aggregate signals into fixed genomic windows
-- Construct a sample × window feature matrix
+- Construct samples × window feature matrix
 
 **Output:**  
 Continuous genomic feature matrix across samples and windows
