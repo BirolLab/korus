@@ -171,6 +171,8 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
         "EAS": "red",
         "AMR": "black",
         "SAS": "blue",
+        "CAS": "violet",
+        "OCE": "lightgreen",
         "NA": "grey"
     }
 
@@ -239,7 +241,24 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
 # -------------------------
 # Interactive PCA Plot (3D)
 # -------------------------
-def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
+def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, frac_df):
+
+
+    # -------------------------
+    # Helper: bar-style fractions
+    # -------------------------
+    def format_bar(fractions, width=14, min_frac=0.01):
+        items = [(k, v) for k, v in fractions.items() if v > min_frac]
+        items.sort(key=lambda x: -x[1])
+
+        lines = []
+        for pop, val in items:
+            #n = max(1, int(round(val * width)))
+            n = int(val * width)
+            bar = "█" * n + " " * (width - n)
+            lines.append(f"{pop:<4} {val:.2f} {bar}")
+
+        return "<br>".join(lines) if lines else "NA"
 
     # Same color logic as 2D plot
     color_map = {
@@ -248,11 +267,20 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
         "EAS": "red",
         "AMR": "black",
         "SAS": "blue",
-        "OCE": "lightgreen",
         "CAS": "violet",
         "query": "cyan",
+        "OCE": "lightgreen",
         "NA": "grey"
     }
+
+    non_numeric = X_sample.select_dtypes(exclude=[np.number])
+    if non_numeric.shape[1] > 0:
+        print("WARNING: Non-numeric columns detected in X_sample:")
+        print(non_numeric.columns.tolist())
+
+    # Ensure numeric-only matrices
+    X_ref = X_ref.select_dtypes(include=[np.number])
+    X_sample = X_sample.select_dtypes(include=[np.number])
 
     # Standardize
     scaler = StandardScaler()
@@ -285,13 +313,35 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
 
     # Query samples
     for i in range(X_sample_pca.shape[0]):
+
+        sample = sample_names[i]
+
+        # Build a compact fraction string
+        if sample in frac_df.index:
+
+            #frac_str = "<br>".join([
+            #   f"{anc}: {val:.2f}"
+            #   for anc, val in (
+            #      frac_df.loc[sample]
+            #      .sort_values(ascending=False)
+            #      .items()
+            #   )
+            #   if val > 0.01
+            #])
+            fractions = frac_df.loc[sample].to_dict()
+            frac_str = format_bar(fractions)
+
+        else:
+            frac_str = "NA"
+
         df_list.append({
             "PC1": X_sample_pca[i, 0],
             "PC2": X_sample_pca[i, 1],
             "PC3": X_sample_pca[i, 2],
             "label": "query",
             "type": "query",
-            "name": sample_names[i]
+            "name": sample,
+            "fractions": frac_str
         })
 
     df = pd.DataFrame(df_list)
@@ -305,12 +355,36 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
         color="label",
         symbol="type",
         hover_name="name",
+        custom_data=["fractions"],   # required for custom hover
         title="korus 3D PCA",
         opacity=0.7,
         color_discrete_map=color_map
     )
 
-    # Make query points larger
+    # -------------------------
+    # Clean hover behavior
+    # -------------------------
+    for trace in fig.data:
+        is_query = (getattr(trace, "name", "") == "query") or ("query" in getattr(trace, "legendgroup", ""))
+        if is_query: 
+            trace.hovertemplate = (
+                "<b>%{hovertext}</b><br>"
+                "PC1: %{x:.3f}<br>"
+                "PC2: %{y:.3f}<br>"
+                "PC3: %{z:.3f}<br><br>"
+                "%{customdata[0]}<extra></extra>"
+            )
+            trace.marker.symbol = "x"
+            trace.marker.size = 5
+        else:
+            trace.hovertemplate = (
+                "<b>%{hovertext}</b><br>"
+                "PC1: %{x:.3f}<br>"
+                "PC2: %{y:.3f}<br>"
+                "PC3: %{z:.3f}<extra></extra>"
+            )
+
+    # Marker sizing
     fig.update_traces(marker=dict(size=5))
     fig.update_layout(
         legend=dict(
@@ -319,9 +393,11 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
         )
     )
 
+    # Highlight query points
     fig.update_traces(
-        selector=dict(mode="markers", name="query"),
-        marker=dict(size=9, symbol="x")
+        #selector=dict(mode="markers", name="query"),
+        selector=dict(name="query"),
+        marker=dict(size=5, symbol="x")
     )
 
     # Save as interactive HTML
@@ -331,7 +407,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix):
     print(f"\tWriting interactive PCA plot to: {outfile}")
 
 # -------------------------
-# NEW: PCA Plot (3D)
+# PCA Plot (3D)
 # -------------------------
 def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
     from mpl_toolkits.mplot3d import Axes3D
@@ -356,6 +432,8 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
         "EAS": "red",
         "AMR": "black",
         "SAS": "blue",
+        "CAS": "violet",
+        "OCE": "lightgreen",
         "NA": "grey"
     }
 
@@ -862,7 +940,8 @@ def main():
 
     # Generate plots
     plot_pca(X_ref_pca, labels, clusters, X_sample_pca, sample_names, args.outprefix)
-    plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, args.outprefix)
+    plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, args.outprefix)
+    plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, args.outprefix, frac_df)
 
 # -------------------------
 # ENTRY POINT
