@@ -40,7 +40,7 @@ KORUS converts k-mer presence in Bloom filters into per-window scalar signals (A
 
 ## Credit <a name="credit"></a>
 
-Developed by René L Warren.
+Developed by XX, XX and René L Warren.
 
 ---
 
