@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # RLW2026
 
 import argparse
@@ -15,6 +15,8 @@ import gzip
 import io
 import os
 import plotly.express as px
+
+KORUSDECODE_VERSION = "v0.1.0"
 
 # -------------------------
 # Tee logger: duplicate stdout to file
@@ -821,6 +823,7 @@ def main():
 
     parser.add_argument("--stay_prob", type=float, default=0.99,help="HMM self-transition probability (smoothing strength)")
     parser.add_argument("--no_hmm", action="store_true", help="Disable HMM smoothing")
+    parser.add_argument("-V", "--version", action="version", version=KORUSDECODE_VERSION)
 
     args = parser.parse_args()
 

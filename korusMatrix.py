@@ -9,6 +9,8 @@ import btllib
 import gzip
 import io
 
+KORUSMATRIX_VERSION = "v0.1.0"
+
 # ----------------------
 # OPEN KMER FILE
 # ----------------------
@@ -33,6 +35,7 @@ parser.add_argument("--kmer_file", required=True, help="File listing SNV kmers")
 parser.add_argument("--output_matrix", required=True, help="Output TSV matrix file")
 parser.add_argument("--window_size", type=int, default=500_000, help="Window size for aggregation")
 parser.add_argument("--k", type=int, default=55, help="Bloom filter(s) k-mer length")
+parser.add_argument("-V", "--version", action="version", version=KORUSMATRIX_VERSION)
 
 args = parser.parse_args()
 
