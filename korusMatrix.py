@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
+# RLW2026
+
 import os
 import re
 import argparse
 from collections import defaultdict
 import btllib
 import gzip
+import io
 
 # ----------------------
 # OPEN KMER FILE
 # ----------------------
 def open_kmer_file(path):
     """
-    Supports plain text, .gz/.bgz (gzip/bgzip) archives.
+    Open plain text or gz/bgz files as a text stream.
     """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Input file does not exist: {path}")
+
     if path.endswith((".gz", ".bgz", ".gzip")):
-        return gzip.open(path, "rt")
+        return io.TextIOWrapper(gzip.open(path, "rb"), encoding="utf-8")
 
     return open(path, "r")
 
@@ -35,6 +41,12 @@ KMER_FILE = args.kmer_file
 OUTPUT_MATRIX = args.output_matrix
 WINDOW_SIZE = args.window_size
 KMER = args.k
+
+# ----------------------
+# VALIDATE INPUT DIRECTORY
+# ----------------------
+if not os.path.isdir(BF_DIR):
+    raise FileNotFoundError(f"Bloom filter directory does not exist: {BF_DIR}")
 
 # ----------------------
 # LIST SAMPLES / BF FILES
@@ -60,7 +72,14 @@ windows_set = set()
 
 with open_kmer_file(KMER_FILE) as f:
     for line in f:
-        chr_, pos, allele, kmer = line.strip().split()
+
+        fields = line.strip().split()
+
+        if len(fields) != 4:
+            raise ValueError(f"Malformed kmer file line:\n{line.strip()}")
+
+        chr_, pos, allele, kmer = fields
+
         key = (chr_, pos)
         if key not in snv_alleles:
             snv_alleles[key] = {}
@@ -83,6 +102,10 @@ matrix = {win: {s: 0.0 for s in samples} for win in windows_list}
 for sample, bf_file in zip(samples, bf_files):
     print(f"Processing sample: {sample}", flush=True)
     bf_path = os.path.join(BF_DIR, bf_file)
+
+    if not os.path.exists(bf_path):
+        raise FileNotFoundError(f"Bloom filter file does not exist: {bf_path}")
+
     bf = btllib.KmerBloomFilter(bf_path)
 
     window_counts = defaultdict(list)
@@ -111,4 +134,3 @@ with open(OUTPUT_MATRIX, "w") as out:
         out.write(f"{chr_}\t{win_start}\t" + "\t".join(row) + "\n")
 
 print(f"Done! Matrix written to {OUTPUT_MATRIX}")
-

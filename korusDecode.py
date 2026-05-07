@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# RLW2026
 
 import argparse
 import pandas as pd
@@ -9,12 +10,10 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 
 import matplotlib.pyplot as plt
-
 import sys
-
 import gzip
 import io
-
+import os
 import plotly.express as px
 
 # -------------------------
@@ -43,8 +42,12 @@ def open_maybe_gz(path):
     """
     Open plain text or gz/bgz files as a text stream.
     """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Input file does not exist: {path}")
+
     if path.endswith((".gz", ".bgz", ".gzip")):
         return io.TextIOWrapper(gzip.open(path, "rb"), encoding="utf-8")
+
     return open(path, "r")
 
 # -------------------------
@@ -829,8 +832,13 @@ def main():
     sys.stdout = Tee(args.outprefix + ".log")
 
     print("Loading data...")
-    X_ref, coords_ref, window_size_ref = load_reference_matrix(args.ref)
-    X_sample, coords_sample, window_size_sample = load_sample_matrix(args.sample)
+    try:
+        X_ref, coords_ref, window_size_ref = load_reference_matrix(args.ref)
+        X_sample, coords_sample, window_size_sample = load_sample_matrix(args.sample)
+
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Assume same window size for ref and sample
     window_size = window_size_ref
