@@ -62,7 +62,8 @@ rule ntcard:
     shell:
         """
         {params.benchmark} \
-        ntcard -k {k} -t {n_threads} \
+        ntcard -k {k} \
+       	-t {n_threads} \
         -p {reads_prefix} \
         {input.reads_files} 
         """
@@ -87,9 +88,10 @@ rule ntstat_bloom:
         """
         {params.benchmark} \
         ntstat filter \
-        -k {k} {params.min_cutoff} \
+        -k {k} \
+        {params.min_cutoff} \
         -t {n_threads} \
-	-f {input.hist} \
+        -f {input.hist} \
         -o {output.bf} \
         {input.reads_files} 
         """
