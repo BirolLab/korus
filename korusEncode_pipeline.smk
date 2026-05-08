@@ -36,7 +36,10 @@ time_command = (
     else linux_time_command
 )
 
-reads_files = sorted(glob.glob(f"{reads_prefix}_*.fastq.gz"))
+reads_files = sorted(
+    glob.glob(f"{reads_prefix}*.fastq.gz") +
+    glob.glob(f"{reads_prefix}*.fq.gz")
+)
 
 # ---------------------------------------------------------
 # FINAL TARGET
