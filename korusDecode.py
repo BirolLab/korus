@@ -821,7 +821,7 @@ def main():
     parser.add_argument("--window_radius", type=int, default=3)
     parser.add_argument("--require_full_window", action="store_true")
 
-    parser.add_argument("--stay_prob", type=float, default=0.99,help="HMM self-transition probability (smoothing strength)")
+    parser.add_argument("--stay_prob", type=float, default=0.98,help="HMM self-transition probability (smoothing strength)")
     parser.add_argument("--no_hmm", action="store_true", help="Disable HMM smoothing")
     parser.add_argument("-V", "--version", action="version", version=KORUSDECODE_VERSION)
 
