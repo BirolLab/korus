@@ -117,7 +117,7 @@ for sample, bf_file in zip(samples, bf_files):
         counts = {"REF":0, "ALT":0}
         for allele, kmer in alleles.items():
             if bf.contains(kmer):
-                counts[allele] += 1
+                counts[allele] = 1
         total = counts["REF"] + counts["ALT"]
         signal = (counts["ALT"] - counts["REF"]) / total if total > 0 else 0.0
         window = snv_window[key]
