@@ -9,7 +9,7 @@ import btllib
 import gzip
 import io
 
-KORUSMATRIX_VERSION = "v0.1.0"
+KORUSMATRIX_VERSION = "v0.1.1"
 
 # ----------------------
 # OPEN KMER FILE
