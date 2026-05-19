@@ -1,0 +1,70 @@
+
+extract_allele_kmers.pl
+
+This script generates allele-centered k-mers from a reference genome and a VCF-like variant stream. It is a utility used to support downstream Korus workflows by producing fixed-length sequence embeddings for both reference and alternate alleles at each variant site.
+
+Purpose
+-------
+extract_allele_kmers.pl converts variant representations (SNVs and small INDELs) into k-mer embeddings centered on the variant position, enabling downstream comparison against sample-specific k-mer profiles (e.g., Bloom filter–based genotyping or similarity scoring).
+
+Unlike traditional SNV-only extractors, this implementation supports:
+
+SNVs
+insertions
+deletions
+multi-allelic sites (multiple ALT representations per position)
+
+Each allele is embedded independently in a fixed-length k-mer window anchored at the variant position.
+
+Inputs
+------
+The script takes two positional arguments:
+
+extract_allele_kmers.pl <reference.fa.gz> <k>
+
+reference.fa.gz : Indexed or gzipped reference genome (FASTA format)
+k : k-mer length (must be odd for symmetric centering; e.g., 45, 55, 75)
+
+Variant records are read from STDIN in tab-delimited VCF-like format:
+
+CHROM  POS  ID  REF  ALT  ...
+
+Multi-allelic ALT fields are supported via comma separation.
+
+Output
+------
+For each variant site, the script emits:
+
+CHROM  POS  REF  <REF_kmer>
+CHROM  POS  ALT  <ALT_kmer>
+One REF k-mer per site (anchored at the reference allele)
+One or more ALT k-mers per site (one per alternate allele representation)
+All k-mers are fixed length k
+
+Key Properties
+--------------
+Fixed-length embedding: All outputs are length k, regardless of INDEL size
+Reference-anchored centering: Variants are embedded using a centered genomic window
+Multi-allelic aware: Multiple ALT representations per locus are preserved
+Genome-consistent refill: INDEL-induced gaps are filled from the reference genome to maintain coordinate consistency
+Streaming design: Operates on STDIN VCF-like streams for pipeline integration
+
+Notes / Design Assumptions
+--------------------------
+The script assumes variants are already left-normalized (as in standard VCF pipelines).
+REF validation is performed against the reference genome slice at the center of the k-mer window.
+Multi-ALT sites are treated independently; downstream tools are responsible for aggregation or collapsing allele redundancy.
+Output is designed for compatibility with Bloom filter–based k-mer querying workflows used in Korus.
+
+Example
+-------
+
+cat variants.vcf \
+  | grep -v '^#' \
+  | perl tools/extract_allele_kmers.pl GRCh38.fa.gz 45 \
+  > allele_kmers.tsv
+
+Role in Korus pipeline
+----------------------
+This script is not part of the core Korus inference engine, but serves as a preprocessing utility that converts variant call representations into a k-mer space suitable for downstream KorusMatrix construction and sample-level signal aggregation.
+
