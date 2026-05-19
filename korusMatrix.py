@@ -8,8 +8,16 @@ from collections import defaultdict
 import btllib
 import gzip
 import io
+import math
 
-KORUSMATRIX_VERSION = "v0.1.1"
+KORUSMATRIX_VERSION = "v0.1.2"
+
+#v0.1.2:
+#Preserves evidence multiplicity : supports multi-ALT sites
+#Compresses redundancy with log-converted signal (minimize effect of off-target and BF FPR)
+#Stabilizes PCA geometry
+#
+#bounded, variance-stabilized, contrast statistic
 
 # ----------------------
 # OPEN KMER FILE
@@ -29,9 +37,9 @@ def open_kmer_file(path):
 # ----------------------
 # ARGUMENT PARSING
 # ----------------------
-parser = argparse.ArgumentParser(description="Build SNV window-sample matrix from Bloom filters")
+parser = argparse.ArgumentParser(description="Build variant window-sample matrix from Bloom filters")
 parser.add_argument("--bf_dir", required=True, help="Directory containing Bloom filter files")
-parser.add_argument("--kmer_file", required=True, help="File listing SNV kmers")
+parser.add_argument("--kmer_file", required=True, help="File listing kmers")
 parser.add_argument("--output_matrix", required=True, help="Output TSV matrix file")
 parser.add_argument("--window_size", type=int, default=500_000, help="Window size for aggregation")
 parser.add_argument("--k", type=int, default=55, help="Bloom filter(s) k-mer length")
@@ -67,7 +75,7 @@ samples = [re.sub(rf"_k{KMER}\.bf$", "", f) for f in bf_files]
 print(f"Found {len(samples)} samples (k={KMER})", flush=True)
 
 # ----------------------
-# BUILD SNV → kmer mapping & window assignment
+# BUILD variant → kmer mapping & window assignment
 # ----------------------
 snv_alleles = {}
 snv_window = {}
@@ -82,14 +90,15 @@ with open_kmer_file(KMER_FILE) as f:
             raise ValueError(f"Malformed kmer file line:\n{line.strip()}")
 
         chr_, pos, allele, kmer = fields
+        pos = int(pos)
 
         key = (chr_, pos)
         if key not in snv_alleles:
-            snv_alleles[key] = {}
-            window_id = (chr_, int(pos)//WINDOW_SIZE)
+            snv_alleles[key] = []
+            window_id = (chr_, pos//WINDOW_SIZE)
             snv_window[key] = window_id
             windows_set.add(window_id)
-        snv_alleles[key][allele] = kmer
+        snv_alleles[key].append((allele, kmer))
 
 windows_list = sorted(list(windows_set))
 print(f"Total windows: {len(windows_list)}", flush=True)
@@ -113,11 +122,24 @@ for sample, bf_file in zip(samples, bf_files):
 
     window_counts = defaultdict(list)
 
-    for key, alleles in snv_alleles.items():
-        counts = {"REF":0, "ALT":0}
-        for allele, kmer in alleles.items():
+    for key, alleles in snv_alleles.items(): 
+
+        counts = {"REF": 0, "ALT": 0}
+
+        for allele, kmer in alleles:
             if bf.contains(kmer):
-                counts[allele] = 1
+                if allele == "REF":
+                    counts["REF"] += 1
+                else:
+                    counts["ALT"] += 1
+
+        # apply log compression to ALT multiplicity
+        counts["ALT"] = math.log1p(counts["ALT"])
+        counts["REF"] = math.log1p(counts["REF"])
+        #log(1+ALT evidence)−log(1+REF evidence)
+        #---------------------------------------
+        #log(1+ALT evidence)+log(1+REF evidence)
+
         total = counts["REF"] + counts["ALT"]
         signal = (counts["ALT"] - counts["REF"]) / total if total > 0 else 0.0
         window = snv_window[key]
