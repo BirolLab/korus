@@ -131,9 +131,20 @@ chmod +x korusSIGNAL.py korusDECODE.py
 
 ## Usage <a name="usage"></a>
 
+
+
 ### 1. MATRIX stage
 
 ```bash
+The SNV-to-signal encode runs via the korusEncode snakemake (runs ntCard, ntStat and korusMatrix.py):
+usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--tile TILE] [-t T] [-n] [-f] [-V]
+korusEncode: the following arguments are required: --reads, --kmer_file, -k 
+
+
+usage: korusMatrix.py [-h] --bf_dir BF_DIR --kmer_file KMER_FILE --output_matrix OUTPUT_MATRIX
+                      [--window_size WINDOW_SIZE] [--k K] [-V]
+korusMatrix.py: the following arguments are required: --bf_dir, --kmer_file, --output_matrix
+
 ./korusMatrix.py 
   --bf_dir /path/to/bloom_filters 
   --snv_kmers snv_kmers.tsv 
@@ -145,12 +156,20 @@ chmod +x korusSIGNAL.py korusDECODE.py
 ### 2. DECODE stage
 
 ```bash
+usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS]
+                          [--k K] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
+                          [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [-V]
+korusDecode.py: the following arguments are required: --ref, --sample, --outprefix
+
 ./korusDecode.py 
+  [-h]
   --ref korusModelMatrixk55.tsv 
   --sample sampleMatrix.tsv 
-  --labels korusModelLabels.tsv 
+  --labels korusModelLabels.tsv
+  --fractions korusModelLabelsFractions.tsv.gz
   --k 5 
   --outprefix korus_run
+  --stay_prob 0.98
 ```
 
 ---
