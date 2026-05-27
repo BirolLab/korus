@@ -16,7 +16,7 @@ import io
 import os
 import plotly.express as px
 
-KORUSDECODE_VERSION = "v0.1.0"
+KORUSDECODE_VERSION = "v0.2.0"
 
 # -------------------------
 # Tee logger: duplicate stdout to file
@@ -109,6 +109,211 @@ def load_labels(path):
     labels = labels.set_index("sample")
 
     return labels
+
+# -------------------------
+# Load ancestry fractions
+# -------------------------
+def load_fraction_labels(path):
+    """
+    Load ancestry fraction table.
+
+    Expected format:
+    sample  AFR  EUR  EAS ...
+    HG001   0.7  0.3  0.0
+
+    Returns:
+        frac_df : DataFrame indexed by sample
+    """
+
+    frac_df = pd.read_csv(open_maybe_gz(path), sep="\t")
+
+    # normalize column names
+    frac_df.columns = [c.strip() for c in frac_df.columns]
+
+    # require sample column
+    if "sample" not in frac_df.columns:
+        raise ValueError(
+            "Fractions file must contain a 'sample' column"
+        )
+
+    frac_df = frac_df.set_index("sample")
+
+    # ensure numeric ancestry columns
+    for col in frac_df.columns:
+        frac_df[col] = pd.to_numeric(frac_df[col], errors="raise")
+
+    # optional normalization safeguard
+    row_sums = frac_df.sum(axis=1)
+
+    if np.any(np.abs(row_sums - 1.0) > 1e-3):
+        print("WARNING: Fraction rows do not sum to 1. Renormalizing.")
+        frac_df = frac_df.div(row_sums, axis=0)
+
+    return frac_df
+
+# -------------------------
+# Weighted Gaussian estimation
+# -------------------------
+def estimate_weighted_gaussians(Z_train, frac_df, classes, reg=1e-3):
+    """
+    Estimate weighted ancestry-specific Gaussian parameters.
+
+    Parameters
+    ----------
+    Z_train : ndarray
+        PCA-transformed training matrix
+
+    frac_df : DataFrame
+        ancestry fractions indexed identically to training samples
+
+    classes : list
+        ancestry names
+
+    Returns
+    -------
+    means : dict
+    covs  : dict
+    """
+
+    means = {}
+    covs = {}
+
+    for c in classes:
+
+        weights = frac_df[c].values.astype(float)
+
+        if np.sum(weights) <= 0:
+            continue
+
+        # weighted mean
+        mu = np.average(Z_train, axis=0, weights=weights)
+
+        # weighted covariance
+        diff = Z_train - mu
+
+        cov = np.einsum(
+            "i,ij,ik->jk",
+            weights,
+            diff,
+            diff
+        ) / np.sum(weights)
+
+        # regularization
+        cov += np.eye(cov.shape[0]) * reg
+
+        means[c] = mu
+        covs[c] = np.linalg.inv(cov)
+
+    return means, covs
+
+# -------------------------
+# Fraction-supervised assignment
+# -------------------------
+def window_fractional_assignment(
+    X_ref,
+    X_sample,
+    frac_labels,
+    knn_mode="window",
+    window_radius=3,
+    require_full_window=False
+):
+
+    preds_all = [[] for _ in range(X_sample.shape[0])]
+    probs_all = [[] for _ in range(X_sample.shape[0])]
+
+    cols_list = list(X_ref.columns)
+
+    classes = np.array(list(frac_labels.columns))
+
+    for i in range(len(cols_list)):
+
+        # -------------------------
+        # Window selection
+        # -------------------------
+        if knn_mode == "raw":
+            cols = [cols_list[i]]
+
+        elif knn_mode == "window":
+
+            start = max(0, i - window_radius)
+            end = min(len(cols_list), i + window_radius + 1)
+
+            cols = cols_list[start:end]
+
+            if require_full_window and len(cols) != (2 * window_radius + 1):
+                continue
+
+        else:
+            raise ValueError(f"Unknown knn_mode: {knn_mode}")
+
+        if len(cols) == 0:
+            continue
+
+        # -------------------------
+        # Data extraction
+        # -------------------------
+        X_train = X_ref[cols].values
+        X_test = X_sample[cols].values
+
+        scaler = StandardScaler()
+
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
+        # -------------------------
+        # PCA stabilization
+        # -------------------------
+        n_comp = min(
+            10,
+            X_train.shape[1],
+            X_train.shape[0] - 1
+        )
+
+        pca = PCA(n_components=n_comp)
+
+        Z_train = pca.fit_transform(X_train)
+        Z_test = pca.transform(X_test)
+
+        # -------------------------
+        # Weighted Gaussian estimation
+        # -------------------------
+        means, covs = estimate_weighted_gaussians(
+            Z_train,
+            frac_labels,
+            classes
+        )
+
+        # -------------------------
+        # Classify samples
+        # -------------------------
+        for s in range(Z_test.shape[0]):
+
+            z = Z_test[s]
+
+            scores = []
+
+            for c in classes:
+
+                diff = z - means[c]
+
+                dist = diff @ covs[c] @ diff
+
+                score = -0.5 * dist
+
+                scores.append(score)
+
+            scores = np.array(scores)
+
+            # softmax normalization
+            exp_scores = np.exp(scores - np.max(scores))
+            probs = exp_scores / exp_scores.sum()
+
+            pred = classes[np.argmax(probs)]
+
+            preds_all[s].append(pred)
+            probs_all[s].append(probs)
+
+    return preds_all, probs_all, classes
 
 # -------------------------
 # Align windows between ref and sample
@@ -809,91 +1014,199 @@ def write_lai_summary(preds_all, probs_all, classes, sample_names, outprefix):
 # MAIN
 # -------------------------
 def main():
-    # Argument parsing
-    parser = argparse.ArgumentParser(description="Ancestry inference with PCA + Mahalanobis window assignment")
 
-    parser.add_argument("--ref", required=True, help="Reference matrix")
-    parser.add_argument("--sample", required=True, help="Sample matrix")
-    parser.add_argument("--labels", required=False, help="Reference labels", default=None)
-    parser.add_argument("--k", type=int, help="KMeans n_clusters", default=5)
-    parser.add_argument("--outprefix", required=True, help="Output prefix")
+    parser = argparse.ArgumentParser(
+        description="Ancestry inference with PCA + Mahalanobis window assignment"
+    )
 
-    parser.add_argument("--window_radius", type=int, default=3)
-    parser.add_argument("--require_full_window", action="store_true")
+    parser.add_argument("--ref", required=True,
+                        help="Reference matrix TSV")
 
-    parser.add_argument("--stay_prob", type=float, default=0.98,help="HMM self-transition probability (smoothing strength)")
-    parser.add_argument("--no_hmm", action="store_true", help="Disable HMM smoothing")
-    parser.add_argument("-V", "--version", action="version", version=KORUSDECODE_VERSION)
+    parser.add_argument("--sample", required=True,
+                        help="Sample matrix TSV")
+
+    parser.add_argument("--labels", required=False, default=None,
+                        help="Discrete ancestry labels TSV")
+
+    parser.add_argument("--fractions", required=False, default=None,
+                        help="Reference ancestry fractions TSV")
+
+    parser.add_argument("--k", type=int, default=5,
+                        help="KMeans n_clusters")
+
+    parser.add_argument("--outprefix", required=True,
+                        help="Output prefix")
+
+    parser.add_argument("--window_radius",
+                        type=int,
+                        default=3)
+
+    parser.add_argument("--require_full_window",
+                        action="store_true")
+
+    parser.add_argument("--stay_prob",
+                        type=float,
+                        default=0.98,
+                        help="HMM self-transition probability")
+
+    parser.add_argument("--no_hmm",
+                        action="store_true",
+                        help="Disable HMM smoothing")
+
+    parser.add_argument("-V", "--version",
+                        action="version",
+                        version=KORUSDECODE_VERSION)
 
     args = parser.parse_args()
 
-    # dual smoothing approach, but tune window_radius down if hmm enabled
-    if not args.no_hmm:
-        args.window_radius = 1 # dials down non-parametric smoother
+    if args.fractions is not None and args.labels is not None:
+        print("WARNING: --fractions provided; ignoring --labels")
 
-    # Redirect stdout to both terminal and log file
+    # -------------------------
+    # smoothing logic
+    # -------------------------
+    if not args.no_hmm:
+        args.window_radius = 1
+
+    # -------------------------
+    # logging
+    # -------------------------
     sys.stdout = Tee(args.outprefix + ".log")
 
+    # -------------------------
+    # load matrices
+    # -------------------------
     print("Loading data...")
+
     try:
-        X_ref, coords_ref, window_size_ref = load_reference_matrix(args.ref)
-        X_sample, coords_sample, window_size_sample = load_sample_matrix(args.sample)
+
+        X_ref, coords_ref, window_size_ref = \
+            load_reference_matrix(args.ref)
+
+        X_sample, coords_sample, window_size_sample = \
+            load_sample_matrix(args.sample)
 
     except FileNotFoundError as e:
+
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Assume same window size for ref and sample
     window_size = window_size_ref
 
-    # Load labels if provided (supervised mode)
-    if args.labels is not None:
+    # -------------------------
+    # load supervision
+    # -------------------------
+    labels = None
+    frac_labels = None
+    y_in = None
+
+    if args.fractions is not None:
+        # soft-supervised mode
+        print("Using fractional ancestry supervision")
+
+        frac_labels = load_fraction_labels(args.fractions)
+
+        # align samples
+        X_ref = X_ref.loc[frac_labels.index]
+
+        frac_labels = frac_labels.loc[X_ref.index]
+
+    elif args.labels is not None:
+        # hard-supervised mode
+        print("Using discrete ancestry supervision")
+
         labels = load_labels(args.labels)
-        # Align reference samples to label order
+
         X_ref = X_ref.loc[labels.index]
-        y = labels["ancestry"].values
-    else:
-        labels = None
-        y = None
 
-    # Align genomic windows between reference and sample
-    X_ref, X_sample = align_matrices(X_ref, coords_ref, X_sample, coords_sample)
-
-    print("Preparing labels / clusters...")
-    if labels is not None:
-        # Supervised mode
         y_in = labels["ancestry"].values
-        clusters = None
+
     else:
-        # Unsupervised mode: generate clusters from PCA
-        print("Running KMeans (unsupervised mode)...")
-        X_ref_pca, _ = run_pca(X_ref, X_sample)   # PCA for clustering stability
-        clusters, kmeans_model = run_kmeans(X_ref_pca, k=args.k)
-        y_in = None
+        # unsupervised mode
+        print("Using unsupervised mode")
 
-    print("Running Mahalanobis window assignment...")
-
-    preds_all, probs_all, classes = window_cluster_assignment(
+    # -------------------------
+    # align windows
+    # -------------------------
+    X_ref, X_sample = align_matrices(
         X_ref,
+        coords_ref,
         X_sample,
-        y_in,
-        args.k,
-        knn_mode="window",
-        window_radius=args.window_radius,
-        require_full_window=args.require_full_window,
-        kmeans_labels=clusters
+        coords_sample
     )
 
     # -------------------------
-    # HMM smoothing (optional)
+    # assignment mode
+    # -------------------------
+    if frac_labels is not None:
+        # soft-supervised mode
+        print("Running fractional Mahalanobis assignment...")
+
+        preds_all, probs_all, classes = \
+            window_fractional_assignment(
+                X_ref,
+                X_sample,
+                frac_labels,
+                knn_mode="window",
+                window_radius=args.window_radius,
+                require_full_window=args.require_full_window
+            )
+
+        clusters = None
+
+    elif labels is not None:
+        # hard-supervised mode
+        print("Running supervised Mahalanobis assignment...")
+
+        preds_all, probs_all, classes = \
+            window_cluster_assignment(
+                X_ref,
+                X_sample,
+                y_in,
+                args.k,
+                knn_mode="window",
+                window_radius=args.window_radius,
+                require_full_window=args.require_full_window,
+                kmeans_labels=None
+            )
+
+        clusters = None
+
+    else:
+        # unsupervised mode
+        print("Running unsupervised KMeans mode...")
+
+        X_ref_pca, _ = run_pca(X_ref, X_sample)
+
+        clusters, kmeans_model = run_kmeans(
+            X_ref_pca,
+            k=args.k
+        )
+
+        preds_all, probs_all, classes = \
+            window_cluster_assignment(
+                X_ref,
+                X_sample,
+                None,
+                args.k,
+                knn_mode="window",
+                window_radius=args.window_radius,
+                require_full_window=args.require_full_window,
+                kmeans_labels=clusters
+            )
+
+    # -------------------------
+    # optional HMM smoothing
     # -------------------------
     if not args.no_hmm:
+
         print("Running HMM smoothing...")
+
         for s in range(len(preds_all)):
+
             if len(probs_all[s]) == 0:
                 continue
 
-            # Apply Viterbi smoothing to per-window predictions
             smoothed = viterbi_smooth(
                 probs_all[s],
                 classes,
@@ -902,14 +1215,24 @@ def main():
 
             preds_all[s] = list(smoothed)
 
+    # -------------------------
+    # aggregate fractions
+    # -------------------------
     print("Aggregating fractions...")
-    frac_matrix, prob_matrix = compute_fractions(preds_all, probs_all, classes)
+
+    frac_matrix, prob_matrix = compute_fractions(
+        preds_all,
+        probs_all,
+        classes
+    )
 
     sample_names = list(X_sample.index)
 
-    print("Running window-level assignment (LAI-style)...")
+    # -------------------------
+    # write LAI outputs
+    # -------------------------
+    print("Writing LAI outputs...")
 
-    # Write detailed per-window outputs
     write_lai_outputs(
         preds_all,
         probs_all,
@@ -920,7 +1243,6 @@ def main():
         window_size
     )
 
-    # Write summary table
     write_lai_summary(
         preds_all,
         probs_all,
@@ -929,30 +1251,72 @@ def main():
         args.outprefix
     )
 
-    # Convert results to DataFrames
-    frac_df = pd.DataFrame(frac_matrix, index=sample_names, columns=classes)
-    prob_df = pd.DataFrame(prob_matrix, index=sample_names, columns=classes)
+    # -------------------------
+    # output matrices
+    # -------------------------
+    frac_df = pd.DataFrame(
+        frac_matrix,
+        index=sample_names,
+        columns=classes
+    )
+
+    prob_df = pd.DataFrame(
+        prob_matrix,
+        index=sample_names,
+        columns=classes
+    )
 
     frac_out = args.outprefix + ".fractions.tsv"
     prob_out = args.outprefix + ".probabilities.tsv"
 
-    # Save outputs
     frac_df.to_csv(frac_out, sep="\t")
     prob_df.to_csv(prob_out, sep="\t")
 
     print(f"\tWriting fractions to: {frac_out}")
     print(f"\tWriting probabilities to: {prob_out}")
 
+    # -------------------------
+    # PCA visualization
+    # -------------------------
     print("Running PCA for visualization...")
-    X_ref_pca, X_sample_pca = run_pca(X_ref, X_sample)
 
-    # Recompute clusters for plotting (independent of assignment phase)
-    clusters, kmeans_model = run_kmeans(X_ref_pca, k=args.k)
+    X_ref_pca, X_sample_pca = run_pca(
+        X_ref,
+        X_sample
+    )
 
-    # Generate plots
-    plot_pca(X_ref_pca, labels, clusters, X_sample_pca, sample_names, args.outprefix)
-    plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, args.outprefix)
-    plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, args.outprefix, frac_df)
+    if clusters is None:
+        plot_clusters = np.zeros(X_ref.shape[0], dtype=int)
+    else:
+        plot_clusters = clusters
+
+    plot_pca(
+        X_ref_pca,
+        labels,
+        plot_clusters,
+        X_sample_pca,
+        sample_names,
+        args.outprefix
+    )
+
+    plot_pca_3d(
+        X_ref,
+        X_sample,
+        labels,
+        plot_clusters,
+        sample_names,
+        args.outprefix
+    )
+
+    plot_pca_3dint(
+        X_ref,
+        X_sample,
+        labels,
+        plot_clusters,
+        sample_names,
+        args.outprefix,
+        frac_df
+    )
 
 # -------------------------
 # ENTRY POINT
