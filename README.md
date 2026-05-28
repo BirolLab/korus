@@ -6,9 +6,9 @@
 
 # KORUS
 
-K-mer Orthogonal Representation for Unified Stratification (of ancestry)  
+K-mer Orthogonal Representation for Unified Stratification (of ancestry) — an orthogonalized ancestry feature representation in PCA-reduced space
 
-KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning clusters via Mahalanobis distance with softmax probabilities, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions.
+KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions.
 
 ## Feature Matrix → Probabilistic Decode Framework for Genomic Ancestry Inference
 
@@ -17,24 +17,33 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 ## Contents
 
 1. [Synopsis](#synopsis)
-2. [Credit](#credit)  
-3. [Overview](#overview)  
-4. [Methodological Framework](#methodological-framework)  
-5. [Installation](#installation)  
-6. [Dependencies](#dependencies)  
-7. [Usage](#usage)  
-8. [Inputs](#inputs)  
-9. [Outputs](#outputs)  
-10. [Workflow Overview](#workflow-overview)  
-11. [Demo](#demo)  
-12. [Citing](#citing)  
-13. [License](#license)  
+2. [Features](#features)
+3. [Credit](#credit)  
+4. [Overview](#overview)  
+5. [Methodological Framework](#methodological-framework)  
+6. [Installation](#installation)  
+7. [Dependencies](#dependencies)  
+8. [Usage](#usage)  
+9. [Inputs](#inputs)  
+10. [Outputs](#outputs)  
+11. [Workflow Overview](#workflow-overview)  
+12. [Demo](#demo)  
+13. [Citing](#citing)  
+14. [License](#license)  
 
 ---
 
 ## Synopsis <a name="synopsis"></a>
 
-KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigns each window to reference clusters via Mahalanobis distance in PCA-reduced feature space with softmax-derived probabilities, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions.
+KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions.
+
+
+### Key methodological features <a name="features"></a>
+
+- k-mer/Bloom-filter ancestry representation
+- Reference-free signal extraction
+- Local ancestry inference without alignment
+- Soft-supervised ancestry manifold modeling
 
 ---
 
@@ -48,7 +57,7 @@ Developed by XX, XX and René L Warren.
 
 KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters.
 
-Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome.
+Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome. The feature space is treated as an orthogonalized ancestry embedding in PCA-reduced coordinates, enabling covariance-aware distance classification. In other words, the feature space is treated as a decorrelated representation in PCA space prior to Mahalanobis distance estimation.
 
 The framework consists of:
 
@@ -80,18 +89,62 @@ Continuous genomic feature matrix across samples and windows
 
 Performs probabilistic inference of ancestry from the feature matrix.
 
+#### Hard supervision (--labels)
+
+Each reference sample is assigned a single discrete ancestry class.
+
+KORUS learns ancestry cluster structure from categorical population labels and performs window-level classification by minimizing Mahalanobis distance to class-specific distributions in PCA space.
+
+This framework assumes each reference genome belongs predominantly to one ancestry class.
+
+In practice this behaves similarly to:
+- supervised metric learning
+- centroid/covariance-based discriminant assignment
+- Gaussian distance classification in reduced-dimensional space
+
+with optional HMM smoothing across genomic windows.
+
+
+#### Soft supervision (--fractions)
+
+Each reference sample contributes fractional ancestry memberships rather than a single categorical label.
+
+Instead of learning discrete ancestry clusters from hard assignments, KORUS estimates ancestry distributions using weighted contributions from admixed reference genomes.
+
+Mahalanobis distances are therefore computed relative to ancestry-specific distributions informed by continuous ancestry weights.
+
+This allows:
+- admixed references
+- continuous ancestry structure
+- smoother ancestry manifolds
+- reduced dependence on discrete continental boundaries
+
+Conceptually, this behaves like:
+- weighted Gaussian supervision
+- probabilistic prototype learning
+- soft-label metric embedding
+
+rather than categorical classification.
+
+#### Hard vs soft supervision behavior
+
+When using --labels, KORUS can model any discrete ancestry category represented in the reference labels.
+
+When using --fractions, the ancestry space is constrained to the ancestry columns provided in the fraction matrix. Ancestries absent from the fraction table are not explicitly modeled during probabilistic decoding.
+
+
 **Core steps:**
 - Standardization of the feature matrix
 - Dimensionality reduction (PCA)
 - Distance-based classification (Mahalanobis)
-- Probability calibration (softmax)
-- Optional clustering (KMeans)
+- Softmax normalization of ancestry likelihoods (Distance-to-probability transformation)
+- Optional unsupervised cluster initialization (KMeans)
 - Spatial smoothing (HMM / Viterbi)
 
 **Output:**
 - Global ancestry fractions  
 - Local ancestry assignments  
-- Posterior probability matrices  
+- Distance-derived ancestry probability matrices  
 - Smoothed ancestry trajectories  
 
 ---
@@ -110,7 +163,7 @@ Sequencing Data
 ```bash
 git clone https://github.com/birollab/korus.git
 cd korus
-chmod +x korusSIGNAL.py korusDECODE.py
+chmod +x korusMatrix.py korusDecode.py
 ```
 
 ---
