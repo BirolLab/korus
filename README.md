@@ -189,13 +189,19 @@ SAMPLE_k55.bf
 chr  pos  allele  kmer
 ```
 
-### Reference labels (optional)
+### Reference hard labels (optional, --labels)
 ```
 sample   ancestry
 ERR1     EUR
 ERR2     AFR
 ```
 
+### Reference soft labels (optional, --fractions)
+```
+sample	 EAS	  SAS	   AMR	   AFR	   EUR
+ERR1	 0.1961	0.0105	0.7233	0.0595	0.0105
+ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
+```
 ---
 
 ## Outputs <a name="outputs"></a>
