@@ -22,7 +22,7 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 4. [Overview](#overview)  
 5. [Methodological Framework](#methodological-framework)  
 6. [Installation](#installation)  
-7. [Dependencies](#dependencies)  
+7. [Requirements](#req)  
 8. [Usage](#usage)  
 9. [Inputs](#inputs)  
 10. [Outputs](#outputs)  
@@ -163,35 +163,71 @@ Sequencing Data
 ```bash
 git clone https://github.com/birollab/korus.git
 cd korus
+
+pip install numpy pandas scikit-learn matplotlib plotly btllib 
+
 chmod +x korusMatrix.py korusDecode.py
 ```
+Alternatively, installation can be performed within a Conda environment.
+---
+
+## Tested environment
+
+KORUS was developed and tested on:
+- Rocky Linux 9.6 (Blue Onyx)
+- Python 3.12.3
 
 ---
 
-## Dependencies
+## Requirements <a name="req"></a>
 
-- Python ≥ 3.9  
-- numpy  
-- pandas  
-- scikit-learn  
+### Core software
+- Python >= 3.9
+- btllib >= 1.7
+
+### Python packages
+- numpy
+- pandas
+- scikit-learn
 - matplotlib
 - plotly
-- btllib
-- gzip 
-- ntEdit / ntStat compatible Bloom filter ecosystem  
+
+### Input data requirements
+KORUS expects Bloom filters generated using a compatible ntHash/ntCard/ntEdit-style workflow.
+
+Compatible `.bf` files can be generated using:
+- ntEdit
+- ntStat
+- btllib utilities
+
+### Python standard library modules used
+The following standard-library modules are used and do not require installation:
+- argparse
+- collections
+- gzip
+- io
+- math
+- os
+- re
+- sys
 
 ---
 
 ## Usage <a name="usage"></a>
 
-
-
 ### 1. MATRIX stage
 
+The SNV-to-signal encode runs via the `korusEncode` snakemake (runs `ntCard`, `ntStat` and `korusMatrix.py`):
 ```bash
-The SNV-to-signal encode runs via the korusEncode snakemake (runs ntCard, ntStat and korusMatrix.py):
+
 usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--tile TILE] [-t T] [-n] [-f] [-V]
 korusEncode: the following arguments are required: --reads, --kmer_file, -k 
+
+./korusEncode
+  --reads Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)
+  --kmer_file snv_kmers.tsv
+  -k 55
+  -t 48
 
 
 usage: korusMatrix.py [-h] --bf_dir BF_DIR --kmer_file KMER_FILE --output_matrix OUTPUT_MATRIX
@@ -220,7 +256,7 @@ korusDecode.py: the following arguments are required: --ref, --sample, --outpref
   --sample sampleMatrix.tsv 
   --labels korusModelLabels.tsv
   --fractions korusModelLabelsFractions.tsv.gz
-  --k 5 
+  --k 5 KMeans n_clusters
   --outprefix korus_run
   --stay_prob 0.98
 ```
