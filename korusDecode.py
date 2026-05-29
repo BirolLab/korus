@@ -16,7 +16,12 @@ import io
 import os
 import plotly.express as px
 
-KORUSDECODE_VERSION = "v0.2.0"
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
+norm = mcolors.Normalize(vmin=0, vmax=1)
+
+KORUSDECODE_VERSION = "v0.2.1"
 
 # -------------------------
 # Tee logger: duplicate stdout to file
@@ -51,6 +56,39 @@ def open_maybe_gz(path):
         return io.TextIOWrapper(gzip.open(path, "rb"), encoding="utf-8")
 
     return open(path, "r")
+
+# -------------------------
+# Entropy calcs
+# -------------------------
+def compute_entropy(row):
+    p = row.values.astype(float)
+    p = p[p > 0]
+    return -np.sum(p * np.log(p))
+
+# -------------------------
+# PCA plot titles
+# -------------------------
+def make_pca_title(mode, dim, k=None, hmm=False, interactive=False):
+    base = "PCA"
+
+    if dim == 3 and interactive:
+        base = "Interactive 3D PCA"
+    elif dim == 3:
+        base = "3D PCA"
+    else:
+        base = "PCA"
+
+    if mode == "fractions":
+        title = f"{base} (fraction-supervised ancestry model)"
+    elif mode == "labels":
+        title = f"{base} (supervised ancestry model)"
+    else:
+        title = f"{base} (unsupervised KMeans ancestry model, k={k})"
+
+    if hmm:
+        title += " [HMM-smoothed]"
+
+    return title
 
 # -------------------------
 # Load reference matrix
@@ -371,7 +409,7 @@ def run_kmeans(X, k):
 # -------------------------
 # PCA Plot (2D)
 # -------------------------
-def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefix):
+def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefix, title):
     plt.figure(figsize=(8, 6))
 
     # Predefined ancestry color scheme
@@ -383,14 +421,15 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
         "SAS": "blue",
         "CAS": "violet",
         "OCE": "lightgreen",
-        "NA": "grey"
+        "NA": "grey",
+        "REF": "grey"
     }
 
     # Determine ancestry categories
     if labels is not None:
         unique_anc = sorted(labels["ancestry"].unique())
     else:
-        unique_anc = ["NA"]
+        unique_anc = ["REF"]
 
     # Dynamically assign colors to unseen ancestries
     import matplotlib.colors as mcolors
@@ -410,17 +449,60 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
                 color = color_map[anc]
             elif anc == "NA":
                 color = color_map["NA"]
+            elif anc == "REF":
+                color = color_map["REF"]
             else:
                 color = dynamic_color_map.get(anc, "grey")
 
+            if clusters is not None and clusters[i] >= 0:
+                label = str(clusters[i] + 1)
+            else:
+                label = ""
+
             plt.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], c=color, s=20, alpha=0.6)
             # Annotate with cluster ID
-            plt.text(X_ref_pca[i, 0], X_ref_pca[i, 1], str(clusters[i] + 1), fontsize=6, alpha=0.5)
+            plt.text(X_ref_pca[i, 0], X_ref_pca[i, 1], label, fontsize=6, alpha=0.5)
     else:
-        # Unlabeled mode
+        # -------------------------
+        # Unsupervised cluster coloring
+        # -------------------------
+        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
+
         for i in range(X_ref_pca.shape[0]):
-            plt.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], c="lightgrey", s=10, alpha=0.4)
-            plt.text(X_ref_pca[i, 0], X_ref_pca[i, 1], str(clusters[i] + 1), fontsize=5, alpha=0.5)
+
+            cluster_id = clusters[i]
+
+            color = mcolors.to_hex(cluster_cmap(cluster_id))
+
+            label = f"C{cluster_id + 1}"
+
+            plt.scatter(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                c=color,
+                s=12,
+                alpha=0.7
+            )
+
+            plt.text(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                label,
+                fontsize=5,
+                alpha=0.6
+            )
+
+        # cluster legend
+        for c in np.unique(clusters):
+
+            color = mcolors.to_hex(cluster_cmap(c))
+
+            plt.scatter(
+                [],
+                [],
+                c=color,
+                label=f"C{c + 1}"
+            )
 
     # Plot query samples
     for i, name in enumerate(X_sample_names):
@@ -433,6 +515,8 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
             c = color_map[anc]
         elif anc == "NA":
             c = color_map["NA"]
+        elif anc == "REF":
+            c = color_map["REF"]
         else:
             c = dynamic_color_map.get(anc, "grey") 
 
@@ -442,8 +526,8 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
 
     plt.xlabel("PC1")
     plt.ylabel("PC2")
-    plt.title("PCA projection with clusters")
-    plt.legend()
+    plt.title(title)
+    plt.legend(loc="lower right")
     plt.tight_layout()
     plt.savefig(f"{outprefix}.pca.png", dpi=300)
     print(f"\tWriting PCA plot to: {outprefix}.pca.png")
@@ -451,26 +535,44 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
 # -------------------------
 # Interactive PCA Plot (3D)
 # -------------------------
-def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, frac_df):
-
+def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, frac_df, title):
 
     # -------------------------
     # Helper: bar-style fractions
     # -------------------------
     def format_bar(fractions, width=14, min_frac=0.01):
-        items = [(k, v) for k, v in fractions.items() if v > min_frac]
+
+        items = [
+            (k, v)
+            for k, v in fractions.items()
+            if v > min_frac
+        ]
+
         items.sort(key=lambda x: -x[1])
 
         lines = []
+
         for pop, val in items:
-            #n = max(1, int(round(val * width)))
+
+            # convert numeric cluster IDs to 1-based C labels
+            try:
+                pop_label = f"C{int(pop) + 1}"
+            except:
+                pop_label = str(pop)
+
             n = int(val * width)
+
             bar = "█" * n + " " * (width - n)
-            lines.append(f"{pop:<4} {val:.2f} {bar}")
+
+            lines.append(
+                f"{pop_label:<4} {val:.2f} {bar}"
+            )
 
         return "<br>".join(lines) if lines else "NA"
 
-    # Same color logic as 2D plot
+    # -------------------------
+    # Color map 
+    # -------------------------
     color_map = {
         "AFR": "orange",
         "EUR": "green",
@@ -480,67 +582,77 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
         "CAS": "violet",
         "query": "cyan",
         "OCE": "lightgreen",
-        "NA": "grey"
+        "NA": "lightgrey"
     }
 
-    non_numeric = X_sample.select_dtypes(exclude=[np.number])
-    if non_numeric.shape[1] > 0:
-        print("WARNING: Non-numeric columns detected in X_sample:")
-        print(non_numeric.columns.tolist())
+    # -------------------------
+    # dynamic cluster colors
+    # -------------------------
+    if clusters is not None and labels is None:
 
-    # Ensure numeric-only matrices
+        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
+
+        for c in np.unique(clusters):
+
+            color_map[f"C{c + 1}"] = mcolors.to_hex(cluster_cmap(c))
+
+    # -------------------------
+    # Ensure numeric only
+    # -------------------------
     X_ref = X_ref.select_dtypes(include=[np.number])
     X_sample = X_sample.select_dtypes(include=[np.number])
 
-    # Standardize
     scaler = StandardScaler()
     X_ref_scaled = scaler.fit_transform(X_ref)
     X_sample_scaled = scaler.transform(X_sample)
 
-    # PCA
     pca = PCA(n_components=3)
     X_ref_pca = pca.fit_transform(X_ref_scaled)
     X_sample_pca = pca.transform(X_sample_scaled)
 
-    # Build dataframe for plotting
+    # -------------------------
+    # Build dataframe
+    # -------------------------
     df_list = []
 
-    # Reference samples
     for i in range(X_ref_pca.shape[0]):
+
+        # -------------------------
+        # supervised mode
+        # -------------------------
         if labels is not None:
-            anc = labels.iloc[i]["ancestry"]
+
+            plot_label = labels.iloc[i]["ancestry"]
+            cluster_label = ""
+            ref_name = labels.index[i]
+
+        # -------------------------
+        # unsupervised mode
+        # -------------------------
         else:
-            anc = "REF"
+
+            plot_label = f"C{clusters[i] + 1}"
+            cluster_label = plot_label
+            ref_name = f"ref_{i}"
 
         df_list.append({
             "PC1": X_ref_pca[i, 0],
             "PC2": X_ref_pca[i, 1],
             "PC3": X_ref_pca[i, 2],
-            "label": anc,
+            "label": plot_label,
             "type": "reference",
-            "name": labels.index[i] if labels is not None else f"ref_{i}"
+            "name": ref_name,
+            "cluster": cluster_label
         })
 
-    # Query samples
+
     for i in range(X_sample_pca.shape[0]):
 
         sample = sample_names[i]
 
-        # Build a compact fraction string
         if sample in frac_df.index:
-
-            #frac_str = "<br>".join([
-            #   f"{anc}: {val:.2f}"
-            #   for anc, val in (
-            #      frac_df.loc[sample]
-            #      .sort_values(ascending=False)
-            #      .items()
-            #   )
-            #   if val > 0.01
-            #])
             fractions = frac_df.loc[sample].to_dict()
             frac_str = format_bar(fractions)
-
         else:
             frac_str = "NA"
 
@@ -551,12 +663,15 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             "label": "query",
             "type": "query",
             "name": sample,
-            "fractions": frac_str
+            "fractions": frac_str,
+            "cluster": ""
         })
 
     df = pd.DataFrame(df_list)
 
-    # Plotly interactive 3D scatter
+    # -------------------------
+    # Plot
+    # -------------------------
     fig = px.scatter_3d(
         df,
         x="PC1",
@@ -565,52 +680,82 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
         color="label",
         symbol="type",
         hover_name="name",
-        custom_data=["fractions"],   # required for custom hover
-        title="korus 3D PCA",
-        opacity=0.7,
+        custom_data=["fractions", "cluster"], 
+        title=title,
+        opacity=0.6,
         color_discrete_map=color_map
     )
 
     # -------------------------
-    # Clean hover behavior
+    # reference point size consistency
+    # -------------------------
+    fig.update_traces(
+        selector=dict(type="scatter3d", mode="markers"),
+        marker=dict(size=5)
+    )
+
+    # -------------------------
+    # remove legend noise
+    # -------------------------
+    for tr in fig.data:
+        if tr.name is not None:
+            tr.name = tr.name.replace(", reference", "")
+            tr.name = tr.name.replace(", query", "")
+
+    # -------------------------
+    # proper legend grouping
+    # -------------------------
+    for tr in fig.data:
+        if getattr(tr, "type", None) == "scatter3d":
+
+            if tr.name == "query" or getattr(tr, "legendgroup", "") == "query":
+                tr.showlegend = True
+                tr.legendgroup = "query"
+                tr.marker.symbol = "x"
+                tr.marker.size = 5
+            else:
+                tr.showlegend = True
+
+    # -------------------------
+    # Hover logic 
     # -------------------------
     for trace in fig.data:
-        is_query = (getattr(trace, "name", "") == "query") or ("query" in getattr(trace, "legendgroup", ""))
-        if is_query: 
+
+        is_query = (
+            getattr(trace, "name", "") == "query"
+            or "query" in getattr(trace, "legendgroup", "")
+        )
+
+        if is_query:
             trace.hovertemplate = (
                 "<b>%{hovertext}</b><br>"
                 "PC1: %{x:.3f}<br>"
                 "PC2: %{y:.3f}<br>"
                 "PC3: %{z:.3f}<br><br>"
-                "%{customdata[0]}<extra></extra>"
+                "%{customdata[0]}"
+                "<extra></extra>"
             )
-            trace.marker.symbol = "x"
-            trace.marker.size = 5
         else:
             trace.hovertemplate = (
                 "<b>%{hovertext}</b><br>"
                 "PC1: %{x:.3f}<br>"
                 "PC2: %{y:.3f}<br>"
-                "PC3: %{z:.3f}<extra></extra>"
+                "PC3: %{z:.3f}<br><br>"
+                "%{customdata[1]}<br>"
+                "<extra></extra>"
             )
-
-    # Marker sizing
-    fig.update_traces(marker=dict(size=5))
+    # -------------------------
+    # Layout
+    # -------------------------
     fig.update_layout(
         legend=dict(
+            title=dict(text="Samples"),
             font=dict(size=14),
             itemsizing="constant"
-        )
+        ),
+        margin=dict(l=0, r=0, t=40, b=120)
     )
 
-    # Highlight query points
-    fig.update_traces(
-        #selector=dict(mode="markers", name="query"),
-        selector=dict(name="query"),
-        marker=dict(size=5, symbol="x")
-    )
-
-    # Save as interactive HTML
     outfile = f"{outprefix}.pca3d.html"
     fig.write_html(outfile)
 
@@ -619,7 +764,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
 # -------------------------
 # PCA Plot (3D)
 # -------------------------
-def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
+def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, title):
     from mpl_toolkits.mplot3d import Axes3D
 
     # Standardize before PCA
@@ -644,15 +789,15 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
         "SAS": "blue",
         "CAS": "violet",
         "OCE": "lightgreen",
-        "NA": "grey"
+        "NA": "grey",
+        "REF": "grey"
     }
 
     if labels is not None:
         unique_anc = sorted(labels["ancestry"].unique())
     else:
-        unique_anc = ["NA"]
+        unique_anc = ["REF"]
     
-
     import matplotlib.colors as mcolors
     cmap = plt.get_cmap("tab20", len(unique_anc))
 
@@ -670,17 +815,61 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
                 color = color_map[anc]
             elif anc == "NA":
                 color = color_map["NA"]
+            elif anc == "REF":
+                color = color_map["REF"]
             else:
                 color = dynamic_color_map.get(anc, "grey")
 
+            if clusters is not None and clusters[i] >= 0:
+                label = str(clusters[i] + 1)
+            else:
+                label = ""
             ax.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2],c=color, s=20, alpha=0.6)
-            ax.text(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2], str(clusters[i] + 1), fontsize=6, alpha=0.5)
+            ax.text(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2], label, fontsize=6, alpha=0.5)
     else:
+        # -------------------------
+        # Unsupervised cluster coloring
+        # -------------------------
+        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
+
         for i in range(X_ref_pca.shape[0]):
-            ax.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2],
-                       c="lightgrey", s=10, alpha=0.4)
-            ax.text(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2],
-                    str(clusters[i] + 1), fontsize=5, alpha=0.5)
+
+            cluster_id = clusters[i]
+
+            color = mcolors.to_hex(cluster_cmap(cluster_id))
+
+            label = f"C{cluster_id + 1}"
+
+            ax.scatter(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                c=color,
+                s=12,
+                alpha=0.7
+            )
+
+            ax.text(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                label,
+                fontsize=5,
+                alpha=0.6
+            )
+
+        # cluster legend
+        for c in np.unique(clusters):
+
+            color = mcolors.to_hex(cluster_cmap(c))
+
+            ax.scatter(
+                [],
+                [],
+                [],
+                c=color,
+                label=f"C{c + 1}"
+            )
 
     # Plot query samples
     for i, name in enumerate(sample_names):
@@ -693,6 +882,8 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
             c = color_map[anc]
         elif anc == "NA":
             c = color_map["NA"]
+        elif anc == "REF":
+            c = color_map["REF"]
         else:
             c = dynamic_color_map.get(anc, "grey") 
 
@@ -703,15 +894,382 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix):
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_zlabel("PC3")
-    ax.set_title("3D PCA projection with clusters")
+    ax.set_title(title)
     ax.legend(loc='center left', bbox_to_anchor=(1.07, 0.5))
-
     plt.tight_layout(rect=[0, 0, 0.8, 1])
     plt.savefig(f"{outprefix}.pca3d.png", dpi=300)
     print(f"\tWriting 3D PCA plot to: {outprefix}.pca3d.png")
 
 # -------------------------
-# Mahalanobis-based LAI assignment (REPLACES KNN)
+# PCA Plot (2D) -- fractions mode
+# -------------------------
+def plot_pca_fraction_2d(X_ref_pca, entropy_vals, X_sample_pca, X_sample_names, outprefix, title):
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    cmap = plt.cm.viridis
+
+    # -------------------------
+    # Reference samples
+    # -------------------------
+    sc = ax.scatter(
+        X_ref_pca[:, 0],
+        X_ref_pca[:, 1],
+        c=entropy_vals.values,
+        cmap=cmap,
+        norm=norm,
+        s=15,
+        alpha=0.8
+    )
+
+    # -------------------------
+    # Query samples
+    # -------------------------
+    ax.scatter(
+        X_sample_pca[:, 0],
+        X_sample_pca[:, 1],
+        c="black",
+        marker="x",
+        s=120,
+        label="query"
+    )
+
+    for i, name in enumerate(X_sample_names):
+        ax.text(
+            X_sample_pca[i, 0],
+            X_sample_pca[i, 1],
+            name,
+            fontsize=9,
+            fontweight="bold"
+        )
+
+    # -------------------------
+    # Colorbar legend
+    # -------------------------
+    cbar = plt.colorbar(
+        sc,
+        ax=ax,
+        orientation="horizontal",
+        pad=0.12,
+        fraction=0.05
+    )
+
+    cbar.set_label("Normalized ancestry entropy")
+
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+
+    ax.set_title(title)
+
+    ax.legend(loc="lower right")
+
+    plt.tight_layout()
+
+    outfile = f"{outprefix}.fractions.pca.png"
+
+    plt.savefig(outfile, dpi=300)
+
+    print(f"\tWriting entropy PCA plot to: {outfile}")
+
+# -------------------------
+# PCA Plot (3D) -- fractions mode
+# -------------------------
+def plot_pca_fraction_3d(X_ref, X_sample, entropy_vals, sample_names, outprefix, title):
+
+    scaler = StandardScaler()
+
+    X_ref_scaled = scaler.fit_transform(X_ref)
+    X_sample_scaled = scaler.transform(X_sample)
+
+    pca = PCA(n_components=3)
+
+    X_ref_pca = pca.fit_transform(X_ref_scaled)
+    X_sample_pca = pca.transform(X_sample_scaled)
+
+    fig = plt.figure(figsize=(8, 6))
+
+    ax = fig.add_subplot(111, projection='3d')
+
+    cmap = plt.cm.viridis
+
+    # -------------------------
+    # Reference samples
+    # -------------------------
+    sc = ax.scatter(
+        X_ref_pca[:, 0],
+        X_ref_pca[:, 1],
+        X_ref_pca[:, 2],
+        c=entropy_vals.values,
+        cmap=cmap,
+        norm=norm,
+        s=15,
+        alpha=0.8
+    )
+
+    # -------------------------
+    # Query samples
+    # -------------------------
+    ax.scatter(
+        X_sample_pca[:, 0],
+        X_sample_pca[:, 1],
+        X_sample_pca[:, 2],
+        c="black",
+        marker="x",
+        s=120,
+        label="query"
+    )
+
+    for i, name in enumerate(sample_names):
+
+        ax.text(
+            X_sample_pca[i, 0],
+            X_sample_pca[i, 1],
+            X_sample_pca[i, 2],
+            name,
+            fontsize=9,
+            fontweight="bold"
+        )
+
+    # -------------------------
+    # Colorbar
+    # -------------------------
+    cbar = fig.colorbar(
+        sc,
+        ax=ax,
+        orientation="horizontal",
+        shrink=0.7,
+        pad=0.08,
+        fraction=0.05
+    )
+
+    cbar.set_label("Normalized ancestry entropy")
+
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_zlabel("PC3")
+
+    ax.set_title(title)
+
+    ax.legend(loc="center left",bbox_to_anchor=(1.07, 0.5))
+    plt.tight_layout(rect=[0, 0.05, 1, 1])
+
+    outfile = f"{outprefix}.fractions.pca3d.png"
+
+    plt.savefig(outfile, dpi=300)
+
+    print(f"\tWriting entropy 3D PCA plot to: {outfile}")
+
+# -------------------------
+# Interactive PCA Plot (3D) -- fractions mode
+# -------------------------
+def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outprefix, frac_df, title):
+
+    # -------------------------
+    # Helper: bar-style fractions
+    # -------------------------
+    def format_bar(fractions, width=14, min_frac=0.01):
+
+        items = [
+            (k, v)
+            for k, v in fractions.items()
+            if v > min_frac
+        ]
+
+        items.sort(key=lambda x: -x[1])
+
+        lines = []
+
+        for pop, val in items:
+
+            n = int(val * width)
+
+            bar = "█" * n + " " * (width - n)
+
+            lines.append(
+                f"{pop:<4} {val:.2f} {bar}"
+            )
+
+        return "<br>".join(lines) if lines else "NA"
+
+    # -------------------------
+    # PCA
+    # -------------------------
+    scaler = StandardScaler()
+
+    X_ref_scaled = scaler.fit_transform(X_ref)
+    X_sample_scaled = scaler.transform(X_sample)
+
+    pca = PCA(n_components=3)
+
+    X_ref_pca = pca.fit_transform(X_ref_scaled)
+    X_sample_pca = pca.transform(X_sample_scaled)
+
+    # -------------------------
+    # Build reference dataframe
+    # -------------------------
+    ref_df = pd.DataFrame({
+        "PC1": X_ref_pca[:, 0],
+        "PC2": X_ref_pca[:, 1],
+        "PC3": X_ref_pca[:, 2],
+        "entropy": entropy_vals.values,
+        "name": entropy_vals.index
+    })
+
+    # -------------------------
+    # Build query dataframe
+    # -------------------------
+    query_rows = []
+
+    for i, sample in enumerate(sample_names):
+
+        if sample in frac_df.index:
+
+            fractions = frac_df.loc[sample].to_dict()
+
+            frac_str = format_bar(fractions)
+
+        else:
+
+            frac_str = "NA"
+
+        query_rows.append({
+            "PC1": X_sample_pca[i, 0],
+            "PC2": X_sample_pca[i, 1],
+            "PC3": X_sample_pca[i, 2],
+            "name": sample,
+            "fractions": frac_str
+        })
+
+    query_df = pd.DataFrame(query_rows)
+
+    # -------------------------
+    # Plot reference samples
+    # -------------------------
+    fig = px.scatter_3d(
+        ref_df,
+        x="PC1",
+        y="PC2",
+        z="PC3",
+        color="entropy",
+        color_continuous_scale="Viridis",
+        range_color=[0, 1],
+        hover_name="name",
+        opacity=0.75,
+        title=title
+    )
+
+    # Match original PCA_3Dint point sizing
+    fig.update_traces(
+        selector=dict(type="scatter3d", mode="markers"),
+        marker=dict(size=5)
+    )
+
+    # -------------------------
+    # Add query samples
+    # -------------------------
+    fig.add_scatter3d(
+        x=query_df["PC1"],
+        y=query_df["PC2"],
+        z=query_df["PC3"],
+        mode="markers+text",
+        text=query_df["name"],
+        textposition="top center",
+        textfont=dict(size=9),
+
+        marker=dict(
+            color="cyan",
+            size=5,
+            symbol="x"
+            #line=dict(width=1)
+        ),
+
+        customdata=query_df[["fractions"]].values,
+
+        name="query",
+
+        showlegend=True,
+
+        hovertemplate=(
+            "<b>%{text}</b><br>"
+            "PC1: %{x:.3f}<br>"
+            "PC2: %{y:.3f}<br>"
+            "PC3: %{z:.3f}<br><br>"
+            "%{customdata[0]}"
+            "<extra></extra>"
+        )
+    )
+
+    # -------------------------
+    # Legend cleanup
+    # -------------------------
+    for tr in fig.data:
+
+        if tr.name == "query":
+            tr.showlegend = True
+            tr.marker.size = 6
+        else:
+            tr.showlegend = False
+
+    # -------------------------
+    # Reference hover
+    # -------------------------
+    for tr in fig.data:
+
+        if tr.name != "query":
+
+            tr.hovertemplate = (
+                "<b>%{hovertext}</b><br>"
+                "PC1: %{x:.3f}<br>"
+                "PC2: %{y:.3f}<br>"
+                "PC3: %{z:.3f}<br><br>"
+                "Entropy: %{marker.color:.3f}"
+                "<extra></extra>"
+            )
+
+    # -------------------------
+    # Layout
+    # -------------------------
+    fig.update_layout(
+
+        coloraxis_colorbar=dict(
+            title=dict(
+                text="Normalized entropy",
+                font=dict(size=18)
+            ),
+            tickfont=dict(size=15),
+            orientation="h",
+            x=0.5,
+            xanchor="center",
+            y=-0.18,
+            len=0.6,
+            thickness=18
+        ),
+
+        legend=dict(
+            title=dict(text="Samples"),
+            font=dict(size=14),
+            itemsizing="constant"
+            #x=0.98,
+            #xanchor="right",
+            #y=0.98XX
+        ),
+
+        margin=dict(
+            l=0,
+            r=0,
+            t=40,
+            b=120
+        )
+    )
+
+    outfile = f"{outprefix}.fractions.pca3d.html"
+
+    fig.write_html(outfile)
+
+    print(f"\tWriting entropy interactive PCA plot to: {outfile}")
+
+# -------------------------
+# Mahalanobis-based LAI assignment
 # -------------------------
 def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_radius=3, require_full_window=False, kmeans_labels=None):
 
@@ -833,7 +1391,9 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
             probs_all[s].append(full_probs)
 
     # Convert classes to string labels
-    classes = np.array([f"{i}" for i in classes])
+    #classes = np.array([f"C{i+1}" for i in classes]) ### WHAT I WANT IN UNSUPERVISED MODE
+    # Convert classes to string labels
+    classes = np.array([f"{i}" for i in classes]) ### WHAT I WANT IN HARD-SUPERVISED
 
     # Convert predictions to string labels
     for s in range(len(preds_all)):
@@ -917,7 +1477,6 @@ def write_lai_outputs(preds_all, probs_all, classes, coords, sample_names, outpr
                 row += [f"{p:.4f}" for p in probs]
 
                 f.write("\t".join(row) + "\n")
-
 
 # -------------------------
 # HMM smoothing via Viterbi
@@ -1260,6 +1819,13 @@ def main():
         columns=classes
     )
 
+    # Compute entropy for coloring in --fractions mode
+    if frac_labels is not None:
+        entropy_vals = frac_labels.apply(compute_entropy, axis=1)
+        entropy_vals = entropy_vals / np.log(len(classes))
+    else:
+        entropy_vals = None
+
     prob_df = pd.DataFrame(
         prob_matrix,
         index=sample_names,
@@ -1280,43 +1846,97 @@ def main():
     # -------------------------
     print("Running PCA for visualization...")
 
+    # Preparing the plot titles
+    hmm_on = not args.no_hmm
+    k = args.k if labels is None and frac_labels is None else None
+    if frac_labels is not None:
+        mode = "fractions"
+    elif labels is not None:
+        mode = "labels"
+    else:
+        mode = "unsupervised"
+    title_2d = make_pca_title(mode, dim=2, k=k, hmm=hmm_on)
+    title_3d = make_pca_title(mode, dim=3, k=k, hmm=hmm_on)
+    title_3dint = make_pca_title(mode, dim=3, k=k, hmm=hmm_on, interactive=True)
+
     X_ref_pca, X_sample_pca = run_pca(
         X_ref,
         X_sample
     )
 
     if clusters is None:
-        plot_clusters = np.zeros(X_ref.shape[0], dtype=int)
+        plot_clusters = np.full(X_ref.shape[0], -1, dtype=int)
     else:
         plot_clusters = clusters
 
-    plot_pca(
-        X_ref_pca,
-        labels,
-        plot_clusters,
-        X_sample_pca,
-        sample_names,
-        args.outprefix
-    )
+    # -------------------------
+    # Fraction-supervised plots
+    # -------------------------
+    if frac_labels is not None:
 
-    plot_pca_3d(
-        X_ref,
-        X_sample,
-        labels,
-        plot_clusters,
-        sample_names,
-        args.outprefix
-    )
+        plot_pca_fraction_2d(
+            X_ref_pca,
+            entropy_vals,
+            X_sample_pca,
+            sample_names,
+            args.outprefix,
+            title_2d
+        )
 
-    plot_pca_3dint(
-        X_ref,
-        X_sample,
-        labels,
-        plot_clusters,
-        sample_names,
-        args.outprefix,
-        frac_df
-    )
+        plot_pca_fraction_3d(
+            X_ref,
+            X_sample,
+            entropy_vals,
+            sample_names,
+            args.outprefix,
+            title_3d
+        )
+
+        plot_pca_fraction_3dint(
+            X_ref,
+            X_sample,
+            entropy_vals,
+            sample_names,
+            args.outprefix,
+            frac_df,
+            title_3dint
+        )
+
+    # -------------------------
+    # Standard plots
+    # -------------------------
+    else:
+
+        plot_pca(
+            X_ref_pca,
+            labels,
+            plot_clusters,
+            X_sample_pca,
+            sample_names,
+            args.outprefix,
+            title_2d
+        )
+
+        plot_pca_3d(
+            X_ref,
+            X_sample,
+            labels,
+            plot_clusters,
+            sample_names,
+            args.outprefix,
+            title_3d
+        )
+
+        plot_pca_3dint(
+            X_ref,
+            X_sample,
+            labels,
+            plot_clusters,
+            sample_names,
+            args.outprefix,
+            frac_df,
+            title_3dint
+        )
 
 # -------------------------
 # ENTRY POINT
