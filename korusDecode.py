@@ -1391,14 +1391,7 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
             probs_all[s].append(full_probs)
 
     # Convert classes to string labels
-    #classes = np.array([f"C{i+1}" for i in classes]) ### WHAT I WANT IN UNSUPERVISED MODE
-    # Convert classes to string labels
-    #classes = np.array([f"{i}" for i in classes]) ### WHAT I WANT IN HARD-SUPERVISED
-
     # Convert predictions to string labels
-    #for s in range(len(preds_all)):
-    #    preds_all[s] = [f"{p}" for p in preds_all[s]]
-    #ZZZ
     # Unsupervised mode
     if kmeans_labels is not None:
         classes = np.array([f"C{i+1}" for i in classes])
