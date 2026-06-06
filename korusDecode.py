@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# RLW2026
+# RLW 04/2026
 
 import argparse
 import pandas as pd
@@ -1393,11 +1393,25 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
     # Convert classes to string labels
     #classes = np.array([f"C{i+1}" for i in classes]) ### WHAT I WANT IN UNSUPERVISED MODE
     # Convert classes to string labels
-    classes = np.array([f"{i}" for i in classes]) ### WHAT I WANT IN HARD-SUPERVISED
+    #classes = np.array([f"{i}" for i in classes]) ### WHAT I WANT IN HARD-SUPERVISED
 
     # Convert predictions to string labels
-    for s in range(len(preds_all)):
-        preds_all[s] = [f"{p}" for p in preds_all[s]]
+    #for s in range(len(preds_all)):
+    #    preds_all[s] = [f"{p}" for p in preds_all[s]]
+    #ZZZ
+    # Unsupervised mode
+    if kmeans_labels is not None:
+        classes = np.array([f"C{i+1}" for i in classes])
+
+        for s in range(len(preds_all)):
+            preds_all[s] = [f"C{p+1}" for p in preds_all[s]]
+
+    # Supervised mode
+    else:
+        classes = np.array([str(i) for i in classes])
+
+        for s in range(len(preds_all)):
+            preds_all[s] = [str(p) for p in preds_all[s]]
 
     return preds_all, probs_all, classes
 
@@ -1470,7 +1484,7 @@ def write_lai_outputs(preds_all, probs_all, classes, coords, sample_names, outpr
 
                 # Combine cluster ID and class label
                 cluster_label = class_to_cluster[pred]
-                pred_label = f"{cluster_label}/{pred}"
+                pred_label = pred 
 
                 # Build output row
                 row = [chr_, str(start), str(end), pred_label]
