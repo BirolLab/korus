@@ -1452,7 +1452,8 @@ def write_lai_outputs(preds_all, probs_all, classes, coords, sample_names, outpr
     # --- per-sample LAI ---
     for s_idx, sample in enumerate(sample_names):
 
-        outfile = f"{outprefix}.{sample}.lai.tsv"
+        safe_sample = str(sample).replace("/", "-").replace(" ", "-")
+        outfile = f"{safe_sample}_{outprefix}.lai.tsv"
         print(f"\tWriting LAI file: {outfile}")
 
         with open(outfile, "w") as f:
