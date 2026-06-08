@@ -21,7 +21,58 @@ import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v0.2.1"
+KORUSDECODE_VERSION = "v0.2.2"
+
+# Define cluster colors
+UNSUPERVISED_PALETTE = [
+    "#4E79A7",  # blue
+    "#F28E2B",  # orange
+    "#E15759",  # red
+    "#76B7B2",  # teal
+    "#59A14F",  # green
+    "#EDC948",  # yellow
+    "#B07AA1",  # purple
+    "#FF9DA7",  # pink
+    "#9C755F",  # brown
+    "#BAB0AC",  # gray
+    "#8dd3c7",  # pastels V
+    "#ffffb3",
+    "#bebada",
+    "#fb8072",
+    "#80b1d3",
+    "#fdb462",
+    "#b3de69",
+    "#fccde5",
+    "#d9d9d9",
+    "#bc80bd"
+]
+
+SPECIAL_CLASSES = {"NA", "REF"}
+
+# -------------------------
+# Define unsupervised colour
+# -------------------------
+def get_cluster_color(cluster_id, unique_clusters):
+    palette = UNSUPERVISED_PALETTE
+    #idx = list(unique_clusters).index(cluster_id)
+    cluster_to_idx = {c: i for i, c in enumerate(unique_clusters)}
+    idx = cluster_to_idx[cluster_id]
+    return palette[idx % len(palette)]
+
+# -------------------------
+# Define dynamic colour
+# -------------------------
+def build_dynamic_ancestry_colors(ancestries, color_map, palette):
+    dynamic = {}
+    used = set(color_map.keys())
+
+    # stable ordering prevents nondeterministic coloring
+    unknowns = sorted([a for a in ancestries if a not in used])
+
+    for i, anc in enumerate(unknowns):
+        dynamic[anc] = palette[i % len(palette)]
+
+    return dynamic
 
 # -------------------------
 # Tee logger: duplicate stdout to file
@@ -421,38 +472,38 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
         "SAS": "blue",
         "CAS": "violet",
         "OCE": "lightgreen",
-        "NA": "grey",
-        "REF": "grey"
+        "NA": "#c000c0",
+        "REF": "#d3d3d3" 
     }
+
+    all_anc = labels["ancestry"].unique() if labels is not None else []
+    dynamic_color_map = build_dynamic_ancestry_colors(
+        all_anc,
+        color_map,
+        UNSUPERVISED_PALETTE
+    )
 
     # Determine ancestry categories
     if labels is not None:
         unique_anc = sorted(labels["ancestry"].unique())
     else:
-        unique_anc = ["REF"]
+        unique_anc = []
 
-    # Dynamically assign colors to unseen ancestries
-    import matplotlib.colors as mcolors
-    cmap = plt.get_cmap("tab20", len(unique_anc))
-
-    dynamic_color_map = {}
-    for i, anc in enumerate(unique_anc):
-        if anc not in color_map:
-            dynamic_color_map[anc] = mcolors.to_hex(cmap(i))
-
+    # -------------------------
     # Plot reference samples
+    # -------------------------
     if labels is not None:
         for i, sample in enumerate(labels.index):
             anc = labels.loc[sample, "ancestry"]
 
             if anc in color_map:
                 color = color_map[anc]
-            elif anc == "NA":
-                color = color_map["NA"]
-            elif anc == "REF":
-                color = color_map["REF"]
+            elif anc in dynamic_color_map:
+                color = dynamic_color_map[anc]
+            elif anc in SPECIAL_CLASSES:
+                color = color_map.get(anc, "grey")
             else:
-                color = dynamic_color_map.get(anc, "grey")
+                color = dynamic_color_map.get(anc, "#999999")
 
             if clusters is not None and clusters[i] >= 0:
                 label = str(clusters[i] + 1)
@@ -460,19 +511,24 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
                 label = ""
 
             plt.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], c=color, s=20, alpha=0.6)
-            # Annotate with cluster ID
             plt.text(X_ref_pca[i, 0], X_ref_pca[i, 1], label, fontsize=6, alpha=0.5)
+
+    # -------------------------
+    # UNSUPERVISED MODE
+    # -------------------------
     else:
-        # -------------------------
-        # Unsupervised cluster coloring
-        # -------------------------
-        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
+        unique_clusters = np.unique(clusters)
+
+        # stable cluster → color mapping (palette-based)
+        cluster_to_color = {
+            c: get_cluster_color(c, unique_clusters)
+            for c in unique_clusters
+        }
 
         for i in range(X_ref_pca.shape[0]):
 
             cluster_id = clusters[i]
-
-            color = mcolors.to_hex(cluster_cmap(cluster_id))
+            color = cluster_to_color[cluster_id]
 
             label = f"C{cluster_id + 1}"
 
@@ -492,35 +548,48 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
                 alpha=0.6
             )
 
-        # cluster legend
-        for c in np.unique(clusters):
+        # cluster legend (consistent with points)
+        for c in unique_clusters:
+            plt.scatter([], [], c=cluster_to_color[c], label=f"C{c + 1}")
 
-            color = mcolors.to_hex(cluster_cmap(c))
-
-            plt.scatter(
-                [],
-                [],
-                c=color,
-                label=f"C{c + 1}"
-            )
-
+    # -------------------------
     # Plot query samples
+    # -------------------------
     for i, name in enumerate(X_sample_names):
         plt.scatter(X_sample_pca[i, 0], X_sample_pca[i, 1], c="black", marker="x", s=120)
         plt.text(X_sample_pca[i, 0], X_sample_pca[i, 1], name, fontsize=9, fontweight="bold")
 
-    # Build legend
+    # -------------------------
+    # Build ancestry legend
+    # -------------------------
+    if labels is not None:
+
+        for anc in unique_anc:
+
+            if anc in color_map:
+                color = color_map[anc]
+            elif anc in dynamic_color_map:
+                color = dynamic_color_map[anc]
+            elif anc in SPECIAL_CLASSES:
+                color = color_map.get(anc, "grey")
+            else:
+                color = dynamic_color_map.get(anc, "#999999")
+
+            plt.scatter([], [], c=color, label=anc)
+
+    # -------------------------
+    # Build legend (ancestries)
+    # -------------------------
     for anc in unique_anc:
         if anc in color_map:
-            c = color_map[anc]
-        elif anc == "NA":
-            c = color_map["NA"]
-        elif anc == "REF":
-            c = color_map["REF"]
+            color = color_map[anc]
+        elif anc in dynamic_color_map:
+            color = dynamic_color_map[anc]
+        elif anc in SPECIAL_CLASSES:
+            color = color_map.get(anc, "grey")
         else:
-            c = dynamic_color_map.get(anc, "grey") 
-
-        plt.scatter([], [], c=c, label=anc)
+            color = dynamic_color_map.get(anc, "#999999")
+        plt.scatter([], [], c=color, label=anc)
 
     plt.scatter([], [], c="black", marker="x", s=120, label="query")
 
@@ -531,6 +600,181 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
     plt.tight_layout()
     plt.savefig(f"{outprefix}.pca.png", dpi=300)
     print(f"\tWriting PCA plot to: {outprefix}.pca.png")
+
+# -------------------------
+# PCA Plot (3D)
+# -------------------------
+def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, title):
+    from mpl_toolkits.mplot3d import Axes3D
+
+    # Standardize before PCA
+    scaler = StandardScaler()
+    X_ref_scaled = scaler.fit_transform(X_ref)
+    X_sample_scaled = scaler.transform(X_sample)
+
+    # 3D PCA
+    pca = PCA(n_components=3)
+    X_ref_pca = pca.fit_transform(X_ref_scaled)
+    X_sample_pca = pca.transform(X_sample_scaled)
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # -------------------------
+    # Color map (supervised)
+    # -------------------------
+    color_map = {
+        "AFR": "orange",
+        "EUR": "green",
+        "EAS": "red",
+        "AMR": "black",
+        "SAS": "blue",
+        "CAS": "violet",
+        "OCE": "lightgreen",
+        "NA": "#c000c0",
+        "REF": "#d3d3d3"
+    }
+
+    all_anc = labels["ancestry"].unique() if labels is not None else []
+    dynamic_color_map = build_dynamic_ancestry_colors(
+        all_anc,
+        color_map,
+        UNSUPERVISED_PALETTE
+    )
+
+    if labels is not None:
+        unique_anc = sorted(labels["ancestry"].unique())
+    else:
+        unique_anc = []
+
+    # =========================================================
+    # UNSUPERVISED MODE
+    # =========================================================
+    if labels is None:
+
+        unique_clusters = np.unique(clusters)
+
+        cluster_to_color = {
+            c: get_cluster_color(c, unique_clusters)
+            for c in unique_clusters
+        }
+
+        for i in range(X_ref_pca.shape[0]):
+
+            cluster_id = clusters[i]
+            color = cluster_to_color[cluster_id]
+            label = f"C{cluster_id + 1}"
+
+            ax.scatter(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                c=color,
+                s=12,
+                alpha=0.7
+            )
+
+            ax.text(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                label,
+                fontsize=5,
+                alpha=0.6
+            )
+
+        # cluster legend (consistent)
+        for c in unique_clusters:
+            ax.scatter([], [], [], c=cluster_to_color[c], label=f"C{c + 1}")
+
+    # =========================================================
+    # SUPERVISED MODE
+    # =========================================================
+    else:
+
+        for i, sample in enumerate(labels.index):
+            anc = labels.loc[sample, "ancestry"]
+
+            if anc in color_map:
+                color = color_map[anc]
+            elif anc in dynamic_color_map:
+                color = dynamic_color_map[anc]
+            elif anc in SPECIAL_CLASSES:
+                color = color_map.get(anc, "grey")
+            else:
+                color = dynamic_color_map.get(anc, "#999999")
+
+            if clusters is not None and clusters[i] >= 0:
+                label = str(clusters[i] + 1)
+            else:
+                label = ""
+
+            ax.scatter(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                c=color,
+                s=20,
+                alpha=0.6
+            )
+
+            ax.text(
+                X_ref_pca[i, 0],
+                X_ref_pca[i, 1],
+                X_ref_pca[i, 2],
+                label,
+                fontsize=6,
+                alpha=0.5
+            )
+
+        # ancestry legend (SINGLE PASS — FIXED)
+        for anc in unique_anc:
+            if anc in color_map:
+                color = color_map[anc]
+            elif anc in dynamic_color_map:
+                color = dynamic_color_map[anc]
+            elif anc in SPECIAL_CLASSES:
+                color = color_map.get(anc, "grey")
+            else:
+                color = dynamic_color_map.get(anc, "#999999")
+            ax.scatter([], [], [], c=color, label=anc)
+
+    # -------------------------
+    # Query samples
+    # -------------------------
+    for i, name in enumerate(sample_names):
+        ax.scatter(
+            X_sample_pca[i, 0],
+            X_sample_pca[i, 1],
+            X_sample_pca[i, 2],
+            c="black",
+            marker="x",
+            s=120
+        )
+        ax.text(
+            X_sample_pca[i, 0],
+            X_sample_pca[i, 1],
+            X_sample_pca[i, 2],
+            name,
+            fontsize=9,
+            fontweight="bold"
+        )
+
+    # -------------------------
+    # FINAL LEGEND (ONLY ONCE)
+    # -------------------------
+    ax.scatter([], [], [], c="black", marker="x", s=120, label="query")
+
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_zlabel("PC3")
+    ax.set_title(title)
+
+    ax.legend(loc='center left', bbox_to_anchor=(1.07, 0.5))
+    plt.tight_layout(rect=[0, 0, 0.8, 1])
+    plt.savefig(f"{outprefix}.pca3d.png", dpi=300)
+
+    print(f"\tWriting 3D PCA plot to: {outprefix}.pca3d.png")
 
 # -------------------------
 # Interactive PCA Plot (3D)
@@ -554,24 +798,20 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
 
         for pop, val in items:
 
-            # convert numeric cluster IDs to 1-based C labels
             try:
                 pop_label = f"C{int(pop) + 1}"
             except:
                 pop_label = str(pop)
 
             n = int(val * width)
-
             bar = "█" * n + " " * (width - n)
 
-            lines.append(
-                f"{pop_label:<4} {val:.2f} {bar}"
-            )
+            lines.append(f"{pop_label:<4} {val:.2f} {bar}")
 
         return "<br>".join(lines) if lines else "NA"
 
     # -------------------------
-    # Color map 
+    # Color map (base)
     # -------------------------
     color_map = {
         "AFR": "orange",
@@ -582,19 +822,16 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
         "CAS": "violet",
         "query": "cyan",
         "OCE": "lightgreen",
-        "NA": "lightgrey"
+        "NA": "#c000c0",
+        "REF": "#d3d3d3"
     }
 
-    # -------------------------
-    # dynamic cluster colors
-    # -------------------------
-    if clusters is not None and labels is None:
-
-        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
-
-        for c in np.unique(clusters):
-
-            color_map[f"C{c + 1}"] = mcolors.to_hex(cluster_cmap(c))
+    all_anc = labels["ancestry"].unique() if labels is not None else []
+    dynamic_color_map = build_dynamic_ancestry_colors(
+        all_anc,
+        color_map,
+        UNSUPERVISED_PALETTE
+    )
 
     # -------------------------
     # Ensure numeric only
@@ -615,37 +852,54 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     # -------------------------
     df_list = []
 
-    for i in range(X_ref_pca.shape[0]):
+    # =========================================================
+    # REFERENCE POINTS
+    # =========================================================
+    if labels is not None:
 
-        # -------------------------
-        # supervised mode
-        # -------------------------
-        if labels is not None:
+        unique_anc = sorted(labels["ancestry"].unique())
+
+        for i in range(X_ref_pca.shape[0]):
 
             plot_label = labels.iloc[i]["ancestry"]
-            cluster_label = ""
             ref_name = labels.index[i]
 
-        # -------------------------
-        # unsupervised mode
-        # -------------------------
-        else:
+            df_list.append({
+                "PC1": X_ref_pca[i, 0],
+                "PC2": X_ref_pca[i, 1],
+                "PC3": X_ref_pca[i, 2],
+                "label": plot_label,
+                "type": "reference",
+                "name": ref_name,
+                "cluster": ""
+            })
 
-            plot_label = f"C{clusters[i] + 1}"
-            cluster_label = plot_label
-            ref_name = f"ref_{i}"
+    else:
+        unique_clusters = np.unique(clusters)
+        unique_anc = [f"C{i+1}" for i in unique_clusters]
 
-        df_list.append({
-            "PC1": X_ref_pca[i, 0],
-            "PC2": X_ref_pca[i, 1],
-            "PC3": X_ref_pca[i, 2],
-            "label": plot_label,
-            "type": "reference",
-            "name": ref_name,
-            "cluster": cluster_label
-        })
+        cluster_to_color_label = {
+            c: f"C{c + 1}" for c in unique_clusters
+        }
 
+        for i in range(X_ref_pca.shape[0]):
 
+            cluster_id = clusters[i]
+            plot_label = cluster_to_color_label[cluster_id]
+
+            df_list.append({
+                "PC1": X_ref_pca[i, 0],
+                "PC2": X_ref_pca[i, 1],
+                "PC3": X_ref_pca[i, 2],
+                "label": plot_label,
+                "type": "reference",
+                "name": f"ref_{i}",
+                "cluster": plot_label
+            })
+
+    # =========================================================
+    # QUERY POINTS
+    # =========================================================
     for i in range(X_sample_pca.shape[0]):
 
         sample = sample_names[i]
@@ -670,6 +924,30 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     df = pd.DataFrame(df_list)
 
     # -------------------------
+    # COMPLETE color map for Plotly
+    # -------------------------
+    color_discrete_map = dict(color_map)
+
+    if labels is not None:
+        for anc in unique_anc:
+            if anc not in color_discrete_map:
+                color_discrete_map[anc] = dynamic_color_map.get(anc, "#999999")
+    else:
+        #for anc in unique_anc:
+        #    color_discrete_map[anc] = "grey"
+        unique_clusters = np.unique(clusters)
+
+        cluster_to_color = {
+            f"C{c+1}": get_cluster_color(c, unique_clusters)
+                for c in unique_clusters
+        }
+
+        color_discrete_map.update(cluster_to_color)
+
+
+    color_discrete_map["query"] = "cyan"
+
+    # -------------------------
     # Plot
     # -------------------------
     fig = px.scatter_3d(
@@ -680,14 +958,14 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
         color="label",
         symbol="type",
         hover_name="name",
-        custom_data=["fractions", "cluster"], 
+        custom_data=["fractions", "cluster"],
         title=title,
         opacity=0.6,
-        color_discrete_map=color_map
+        color_discrete_map=color_discrete_map
     )
 
     # -------------------------
-    # reference point size consistency
+    # marker sizing
     # -------------------------
     fig.update_traces(
         selector=dict(type="scatter3d", mode="markers"),
@@ -695,7 +973,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     )
 
     # -------------------------
-    # remove legend noise
+    # clean legend noise
     # -------------------------
     for tr in fig.data:
         if tr.name is not None:
@@ -703,7 +981,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             tr.name = tr.name.replace(", query", "")
 
     # -------------------------
-    # proper legend grouping
+    # legend grouping fix
     # -------------------------
     for tr in fig.data:
         if getattr(tr, "type", None) == "scatter3d":
@@ -717,7 +995,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
                 tr.showlegend = True
 
     # -------------------------
-    # Hover logic 
+    # hover logic
     # -------------------------
     for trace in fig.data:
 
@@ -744,8 +1022,9 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
                 "%{customdata[1]}<br>"
                 "<extra></extra>"
             )
+
     # -------------------------
-    # Layout
+    # layout
     # -------------------------
     fig.update_layout(
         legend=dict(
@@ -760,145 +1039,6 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     fig.write_html(outfile)
 
     print(f"\tWriting interactive PCA plot to: {outfile}")
-
-# -------------------------
-# PCA Plot (3D)
-# -------------------------
-def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, title):
-    from mpl_toolkits.mplot3d import Axes3D
-
-    # Standardize before PCA
-    scaler = StandardScaler()
-    X_ref_scaled = scaler.fit_transform(X_ref)
-    X_sample_scaled = scaler.transform(X_sample)
-
-    # 3D PCA
-    pca = PCA(n_components=3)
-    X_ref_pca = pca.fit_transform(X_ref_scaled)
-    X_sample_pca = pca.transform(X_sample_scaled)
-
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Same color logic as 2D plot
-    color_map = {
-        "AFR": "orange",
-        "EUR": "green",
-        "EAS": "red",
-        "AMR": "black",
-        "SAS": "blue",
-        "CAS": "violet",
-        "OCE": "lightgreen",
-        "NA": "grey",
-        "REF": "grey"
-    }
-
-    if labels is not None:
-        unique_anc = sorted(labels["ancestry"].unique())
-    else:
-        unique_anc = ["REF"]
-    
-    import matplotlib.colors as mcolors
-    cmap = plt.get_cmap("tab20", len(unique_anc))
-
-    dynamic_color_map = {}
-    for i, anc in enumerate(unique_anc):
-        if anc not in color_map:
-            dynamic_color_map[anc] = mcolors.to_hex(cmap(i))
-
-    # Plot reference points
-    if labels is not None:
-        for i, sample in enumerate(labels.index):
-            anc = labels.loc[sample, "ancestry"]
-
-            if anc in color_map:
-                color = color_map[anc]
-            elif anc == "NA":
-                color = color_map["NA"]
-            elif anc == "REF":
-                color = color_map["REF"]
-            else:
-                color = dynamic_color_map.get(anc, "grey")
-
-            if clusters is not None and clusters[i] >= 0:
-                label = str(clusters[i] + 1)
-            else:
-                label = ""
-            ax.scatter(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2],c=color, s=20, alpha=0.6)
-            ax.text(X_ref_pca[i, 0], X_ref_pca[i, 1], X_ref_pca[i, 2], label, fontsize=6, alpha=0.5)
-    else:
-        # -------------------------
-        # Unsupervised cluster coloring
-        # -------------------------
-        cluster_cmap = plt.get_cmap("tab20", len(np.unique(clusters)))
-
-        for i in range(X_ref_pca.shape[0]):
-
-            cluster_id = clusters[i]
-
-            color = mcolors.to_hex(cluster_cmap(cluster_id))
-
-            label = f"C{cluster_id + 1}"
-
-            ax.scatter(
-                X_ref_pca[i, 0],
-                X_ref_pca[i, 1],
-                X_ref_pca[i, 2],
-                c=color,
-                s=12,
-                alpha=0.7
-            )
-
-            ax.text(
-                X_ref_pca[i, 0],
-                X_ref_pca[i, 1],
-                X_ref_pca[i, 2],
-                label,
-                fontsize=5,
-                alpha=0.6
-            )
-
-        # cluster legend
-        for c in np.unique(clusters):
-
-            color = mcolors.to_hex(cluster_cmap(c))
-
-            ax.scatter(
-                [],
-                [],
-                [],
-                c=color,
-                label=f"C{c + 1}"
-            )
-
-    # Plot query samples
-    for i, name in enumerate(sample_names):
-        ax.scatter(X_sample_pca[i, 0], X_sample_pca[i, 1], X_sample_pca[i, 2], c="black", marker="x", s=120)
-        ax.text(X_sample_pca[i, 0], X_sample_pca[i, 1], X_sample_pca[i, 2], name, fontsize=9, fontweight="bold")
-
-    # Legend
-    for anc in unique_anc:
-        if anc in color_map:
-            c = color_map[anc]
-        elif anc == "NA":
-            c = color_map["NA"]
-        elif anc == "REF":
-            c = color_map["REF"]
-        else:
-            c = dynamic_color_map.get(anc, "grey") 
-
-        ax.scatter([], [], [], c=c, label=anc)
-
-    ax.scatter([], [], [], c="black", marker="x", s=120, label="query")
-
-    ax.set_xlabel("PC1")
-    ax.set_ylabel("PC2")
-    ax.set_zlabel("PC3")
-    ax.set_title(title)
-    ax.legend(loc='center left', bbox_to_anchor=(1.07, 0.5))
-    plt.tight_layout(rect=[0, 0, 0.8, 1])
-    plt.savefig(f"{outprefix}.pca3d.png", dpi=300)
-    print(f"\tWriting 3D PCA plot to: {outprefix}.pca3d.png")
 
 # -------------------------
 # PCA Plot (2D) -- fractions mode
