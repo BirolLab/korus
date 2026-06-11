@@ -1738,7 +1738,7 @@ def main():
     parser.add_argument("--fractions", required=False, default=None,
                         help="Reference ancestry fractions TSV")
 
-    parser.add_argument("--k", type=int, default=5,
+    parser.add_argument("--c", type=int, default=5,
                         help="KMeans n_clusters")
 
     parser.add_argument("--outprefix", required=True,
@@ -1870,7 +1870,7 @@ def main():
                 X_ref,
                 X_sample,
                 y_in,
-                args.k,
+                args.c,
                 knn_mode="window",
                 window_radius=args.window_radius,
                 require_full_window=args.require_full_window,
@@ -1887,7 +1887,7 @@ def main():
 
         clusters, kmeans_model = run_kmeans(
             X_ref_pca,
-            k=args.k
+            k=args.c
         )
 
         preds_all, probs_all, classes = \
@@ -1895,7 +1895,7 @@ def main():
                 X_ref,
                 X_sample,
                 None,
-                args.k,
+                args.c,
                 knn_mode="window",
                 window_radius=args.window_radius,
                 require_full_window=args.require_full_window,
@@ -1996,7 +1996,7 @@ def main():
 
     # Preparing the plot titles
     hmm_on = not args.no_hmm
-    k = args.k if labels is None and frac_labels is None else None
+    k = args.c if labels is None and frac_labels is None else None
     if frac_labels is not None:
         mode = "fractions"
     elif labels is not None:
