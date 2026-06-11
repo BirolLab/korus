@@ -173,10 +173,22 @@ body {{
     font-family: Arial, sans-serif;
     margin: 20px;
 }}
+
+.container {{
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}}
+
+.panel {{
+    flex: 1;
+}}
+
 iframe {{
     width: 100%;
     border: none;
 }}
+
 </style>
 
 <head>
@@ -187,9 +199,19 @@ iframe {{
 
 <h1>{title}</h1>
 
-<iframe src="{pca_html}" height="900"></iframe>
+<div class="container">
 
-<iframe src="{lai_html}" height="1200"></iframe>
+    <div class="panel">
+        <h2>Local Ancestry Inference</h2>
+        <iframe src="{lai_html}" height="1200"></iframe>
+    </div>
+
+    <div class="panel">
+        <h2>PCA</h2>
+        <iframe src="{pca_html}" height="900"></iframe>
+    </div>
+
+</div>
 
 </body>
 </html>
