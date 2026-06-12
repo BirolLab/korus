@@ -561,24 +561,6 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
         plt.text(X_sample_pca[i, 0], X_sample_pca[i, 1], name, fontsize=9, fontweight="bold")
 
     # -------------------------
-    # Build ancestry legend
-    # -------------------------
-    if labels is not None:
-
-        for anc in unique_anc:
-
-            if anc in color_map:
-                color = color_map[anc]
-            elif anc in dynamic_color_map:
-                color = dynamic_color_map[anc]
-            elif anc in SPECIAL_CLASSES:
-                color = color_map.get(anc, "grey")
-            else:
-                color = dynamic_color_map.get(anc, "#999999")
-
-            plt.scatter([], [], c=color, label=anc)
-
-    # -------------------------
     # Build legend (ancestries)
     # -------------------------
     for anc in unique_anc:
