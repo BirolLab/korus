@@ -15,13 +15,14 @@ import gzip
 import io
 import os
 import plotly.express as px
+import plotly.graph_objects as go
 
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v0.2.2"
+KORUSDECODE_VERSION = "v0.2.3"
 
 # Define cluster colors
 UNSUPERVISED_PALETTE = [
@@ -900,6 +901,8 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     # =========================================================
     # QUERY POINTS
     # =========================================================
+    query_labels = []
+
     for i in range(X_sample_pca.shape[0]):
 
         sample = sample_names[i]
@@ -921,10 +924,13 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             "cluster": ""
         })
 
+        # IMPORTANT: label text only for query points
+        query_labels.append(sample)
+
     df = pd.DataFrame(df_list)
 
     # -------------------------
-    # COMPLETE color map for Plotly
+    # COMPLETE color map
     # -------------------------
     color_discrete_map = dict(color_map)
 
@@ -937,88 +943,65 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
 
         cluster_to_color = {
             f"C{c+1}": get_cluster_color(c, unique_clusters)
-                for c in unique_clusters
+            for c in unique_clusters
         }
 
         color_discrete_map.update(cluster_to_color)
 
-
     color_discrete_map["query"] = "cyan"
 
     # -------------------------
-    # Plot
+    # BUILD FIG (GRAPH OBJECTS, NOT PX)
     # -------------------------
-    fig = px.scatter_3d(
-        df,
-        x="PC1",
-        y="PC2",
-        z="PC3",
-        color="label",
-        symbol="type",
-        hover_name="name",
-        custom_data=["fractions", "cluster"],
-        opacity=0.6,
-        color_discrete_map=color_discrete_map
-    )
+    fig = go.Figure()
 
     # -------------------------
-    # marker sizing
+    # References
     # -------------------------
-    fig.update_traces(
-        selector=dict(type="scatter3d", mode="markers"),
-        marker=dict(size=5)
-    )
+    for lab in df[df["type"] == "reference"]["label"].unique():
 
-    # -------------------------
-    # clean legend noise
-    # -------------------------
-    for tr in fig.data:
-        if tr.name is not None:
-            tr.name = tr.name.replace(", reference", "")
-            tr.name = tr.name.replace(", query", "")
+        sub = df[(df["type"] == "reference") & (df["label"] == lab)]
 
-    # -------------------------
-    # legend grouping fix
-    # -------------------------
-    for tr in fig.data:
-        if getattr(tr, "type", None) == "scatter3d":
-
-            if tr.name == "query" or getattr(tr, "legendgroup", "") == "query":
-                tr.showlegend = True
-                tr.legendgroup = "query"
-                tr.marker.symbol = "x"
-                tr.marker.size = 5
-            else:
-                tr.showlegend = True
-
-    # -------------------------
-    # hover logic
-    # -------------------------
-    for trace in fig.data:
-
-        is_query = (
-            getattr(trace, "name", "") == "query"
-            or "query" in getattr(trace, "legendgroup", "")
-        )
-
-        if is_query:
-            trace.hovertemplate = (
-                "<b>%{hovertext}</b><br>"
+        fig.add_trace(go.Scatter3d(
+            x=sub["PC1"],
+            y=sub["PC2"],
+            z=sub["PC3"],
+            mode="markers",
+            name=lab,
+            marker=dict(size=5, color=color_discrete_map.get(lab, "#999999"), opacity=0.6),
+            text=sub["name"],
+            hovertemplate=
+                "<b>%{text}</b><br>"
                 "PC1: %{x:.3f}<br>"
                 "PC2: %{y:.3f}<br>"
-                "PC3: %{z:.3f}<br><br>"
-                "%{customdata[0]}"
+                "PC3: %{z:.3f}<br>"
                 "<extra></extra>"
-            )
-        else:
-            trace.hovertemplate = (
-                "<b>%{hovertext}</b><br>"
-                "PC1: %{x:.3f}<br>"
-                "PC2: %{y:.3f}<br>"
-                "PC3: %{z:.3f}<br><br>"
-                "%{customdata[1]}<br>"
-                "<extra></extra>"
-            )
+        ))
+
+    # -------------------------
+    # Queries (WITH LABELS ADDED HERE)
+    # -------------------------
+    qdf = df[df["type"] == "query"]
+
+    fig.add_trace(go.Scatter3d(
+        x=qdf["PC1"],
+        y=qdf["PC2"],
+        z=qdf["PC3"],
+        mode="markers+text",
+        name="query",
+        text=query_labels,
+        textposition="top center",
+        textfont=dict(size=9),
+        marker=dict(size=5, color="cyan", symbol="x"),
+        customdata=qdf["fractions"],
+        hovertemplate=
+            "<b>%{text}</b><br>"
+            "PC1: %{x:.3f}<br>"
+            "PC2: %{y:.3f}<br>"
+            "PC3: %{z:.3f}<br><br>"
+            "%{customdata}"
+            "<extra></extra>"
+    ))
 
     # -------------------------
     # layout
@@ -1034,13 +1017,11 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             pad=dict(t=0, b=0),
             font=dict(size=18)
         ),
-        #font=dict(size=14),
         legend=dict(
             title=dict(text="Samples"),
             font=dict(size=12),
             itemsizing="constant"
         ),
-        #margin=dict(l=0, r=0, t=40, b=120)
         margin=dict(l=40, r=140, t=60, b=40)
     )
 
@@ -1303,7 +1284,7 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
         color_continuous_scale="Viridis",
         range_color=[0, 1],
         hover_name="name",
-        opacity=0.75
+        opacity=0.6
     )
 
     # Match original PCA_3Dint point sizing
@@ -1328,7 +1309,6 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
             color="cyan",
             size=5,
             symbol="x"
-            #line=dict(width=1)
         ),
 
         customdata=query_df[["fractions"]].values,
@@ -1409,7 +1389,6 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
             itemsizing="constant"
         ),
 
-        #margin=dict(l=0,r=0,t=40,b=120)
         margin=dict(l=40, r=140, t=60, b=40),
     )
 
@@ -1472,7 +1451,6 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
 
         # PCA dimensionality reduction for numerical stability
         n_comp = min(10, X_train.shape[1], X_train.shape[0] - 1)
-        #n_comp = max(1, min(10, X_train.shape[1], X_train.shape[0] - 1))
         pca = PCA(n_components=n_comp)
         Z_train = pca.fit_transform(X_train)
         Z_test = pca.transform(X_test)
@@ -1497,8 +1475,6 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
 
             # Diagonal regularization (covariance shrinkage)
             cov += np.eye(cov.shape[0]) * 1e-3
-            #eps = 1e-3 * np.trace(cov) / cov.shape[0]
-            #cov += np.eye(cov.shape[0]) * eps
 
             means[c] = mu
             covs[c] = np.linalg.inv(cov)
