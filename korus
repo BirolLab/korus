@@ -114,7 +114,7 @@ def set_up_parser():
 
     parser.add_argument(
         "--report_title",
-        default="KORUS Analysis Report"
+        default="KORUS Ancestry Predictions"
     )
 
     parser.add_argument(
@@ -168,31 +168,65 @@ def write_report(outprefix, title, pca_html, lai_html):
 
     html = """
 <html>
+<head>
+<title>{title}</title>
+
 <style>
 body {{
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 0;
+    padding: 20px;
+    background: #ffffff;
 }}
 
+/* Overall page title */
+h1 {{
+    margin-bottom: 10px;
+}}
+
+/* Two-panel layout */
 .container {{
     display: flex;
     gap: 20px;
-    align-items: flex-start;
+    align-items: stretch;
+    height: calc(100vh - 80px);
 }}
 
+/* Each panel fills half width */
 .panel {{
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }}
 
+/* Section titles */
+.panel h2 {{
+    margin: 0 0 10px 0;
+    font-size: 22px;
+}}
+
+/* Responsive iframe */
 iframe {{
     width: 100%;
+    flex-grow: 1;
     border: none;
+    border-radius: 6px;
+}}
+
+/* Stack vertically on small screens */
+@media (max-width: 900px) {{
+    .container {{
+        flex-direction: column;
+        height: auto;
+    }}
+
+    iframe {{
+        height: 80vh;
+    }}
 }}
 
 </style>
-
-<head>
-<title>{title}</title>
 </head>
 
 <body>
@@ -202,13 +236,13 @@ iframe {{
 <div class="container">
 
     <div class="panel">
-        <h2>Local Ancestry Inference</h2>
-        <iframe src="{lai_html}" height="1200"></iframe>
+        <h2>Genome View</h2>
+        <iframe src="{lai_html}"></iframe>
     </div>
 
     <div class="panel">
-        <h2>PCA</h2>
-        <iframe src="{pca_html}" height="900"></iframe>
+        <h2>Population Context</h2>
+        <iframe src="{pca_html}"></iframe>
     </div>
 
 </div>
@@ -361,10 +395,10 @@ def main():
 
     sample_name = query_samples[0]
 
-    if args.report_title == "KORUS Analysis Report":
+    if args.report_title == "KORUS Ancestry Predictions":
 
         args.report_title = (
-           f"KORUS ancestry report: {sample_name}"
+           f"KORUS Ancestry Predictions : {sample_name}"
         )
 
     # --------------------------------------------------

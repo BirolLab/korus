@@ -123,18 +123,18 @@ def make_pca_title(mode, dim, k=None, hmm=False, interactive=False):
     base = "PCA"
 
     if dim == 3 and interactive:
-        base = "Interactive 3D PCA"
+        base = "PCA"
     elif dim == 3:
         base = "3D PCA"
     else:
         base = "PCA"
 
     if mode == "fractions":
-        title = f"{base} (fraction-supervised ancestry model)"
+        title = f"Soft-supervised ancestry {base} projection"
     elif mode == "labels":
-        title = f"{base} (supervised ancestry model)"
+        title = f"Hard-supervised ancestry {base} projection"
     else:
-        title = f"{base} (unsupervised KMeans ancestry model, k={k})"
+        title = f"Unsupervised ancestry clustering (KMeans k={k})"
 
     if hmm:
         title += " [HMM-smoothed]"
@@ -933,8 +933,6 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             if anc not in color_discrete_map:
                 color_discrete_map[anc] = dynamic_color_map.get(anc, "#999999")
     else:
-        #for anc in unique_anc:
-        #    color_discrete_map[anc] = "grey"
         unique_clusters = np.unique(clusters)
 
         cluster_to_color = {
@@ -959,7 +957,6 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
         symbol="type",
         hover_name="name",
         custom_data=["fractions", "cluster"],
-        title=title,
         opacity=0.6,
         color_discrete_map=color_discrete_map
     )
@@ -1027,16 +1024,28 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     # layout
     # -------------------------
     fig.update_layout(
+        autosize=True,
+        title=dict(
+            text=title,
+            x=0.5,
+            xanchor="center",
+            y=0.95,
+            yanchor="top",
+            pad=dict(t=0, b=0),
+            font=dict(size=18)
+        ),
+        #font=dict(size=14),
         legend=dict(
             title=dict(text="Samples"),
-            font=dict(size=14),
+            font=dict(size=12),
             itemsizing="constant"
         ),
-        margin=dict(l=0, r=0, t=40, b=120)
+        #margin=dict(l=0, r=0, t=40, b=120)
+        margin=dict(l=40, r=140, t=60, b=40)
     )
 
     outfile = f"{outprefix}.pca3d.html"
-    fig.write_html(outfile)
+    fig.write_html(outfile, config={"responsive": True})
 
     print(f"\tWriting interactive PCA plot to: {outfile}")
 
@@ -1294,8 +1303,7 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
         color_continuous_scale="Viridis",
         range_color=[0, 1],
         hover_name="name",
-        opacity=0.75,
-        title=title
+        opacity=0.75
     )
 
     # Match original PCA_3Dint point sizing
@@ -1370,7 +1378,17 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
     # Layout
     # -------------------------
     fig.update_layout(
-
+        autosize=True,
+        title=dict(
+            text=title,
+            x=0.5,
+            xanchor="center",
+            y=0.95,
+            yanchor="top",
+            pad=dict(t=0, b=0),
+            font=dict(size=18)
+        ),
+        #font=dict(size=14),
         coloraxis_colorbar=dict(
             title=dict(
                 text="Normalized entropy",
@@ -1387,24 +1405,17 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
 
         legend=dict(
             title=dict(text="Samples"),
-            font=dict(size=14),
+            font=dict(size=12),
             itemsizing="constant"
-            #x=0.98,
-            #xanchor="right",
-            #y=0.98XX
         ),
 
-        margin=dict(
-            l=0,
-            r=0,
-            t=40,
-            b=120
-        )
+        #margin=dict(l=0,r=0,t=40,b=120)
+        margin=dict(l=40, r=140, t=60, b=40),
     )
 
     outfile = f"{outprefix}.fractions.pca3d.html"
 
-    fig.write_html(outfile)
+    fig.write_html(outfile, config={"responsive": True})
 
     print(f"\tWriting entropy interactive PCA plot to: {outfile}")
 
