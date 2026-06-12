@@ -933,7 +933,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     color_discrete_map["query"] = "cyan"
 
     # -------------------------
-    # BUILD FIG (GRAPH OBJECTS, NOT PX)
+    # BUILD FIG (GRAPH OBJECTS)
     # -------------------------
     fig = go.Figure()
 
@@ -952,11 +952,13 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             name=lab,
             marker=dict(size=5, color=color_discrete_map.get(lab, "#999999"), opacity=0.6),
             text=sub["name"],
+            customdata=sub["cluster"],
             hovertemplate=
                 "<b>%{text}</b><br>"
                 "PC1: %{x:.3f}<br>"
                 "PC2: %{y:.3f}<br>"
-                "PC3: %{z:.3f}<br>"
+                "PC3: %{z:.3f}<br><br>"
+                "%{customdata}<br>"
                 "<extra></extra>"
         ))
 
