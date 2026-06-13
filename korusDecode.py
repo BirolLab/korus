@@ -1002,7 +1002,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             font=dict(size=18)
         ),
         legend=dict(
-            title=dict(text="Samples"),
+        #    title=dict(text="Samples"),
             font=dict(size=12),
             itemsizing="constant"
         ),
@@ -1368,7 +1368,7 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
         ),
 
         legend=dict(
-            title=dict(text="Samples"),
+        #    title=dict(text="Samples"),
             font=dict(size=12),
             itemsizing="constant"
         ),

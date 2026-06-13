@@ -26,9 +26,12 @@ import shlex
 import subprocess
 import pandas as pd
 import shutil
+import re
 
-KORUS_VERSION = "v0.1.2"
 
+KORUS_VERSION = "v0.2.7"
+
+#-----------------------------
 def set_up_parser():
 
     parser = argparse.ArgumentParser(
@@ -43,6 +46,13 @@ def set_up_parser():
         "--reads",
         required=True,
         help="Input read prefix"
+    )
+
+    parser.add_argument(
+        "--report_mode",
+        choices=["iframe", "embed"],
+        default="iframe",
+        help="Report layout mode [default=iframe]"
     )
 
     parser.add_argument(
@@ -145,7 +155,7 @@ def set_up_parser():
 
     return parser
 
-
+#-----------------------------
 def run_command(cmd, dry_run=False):
 
     print(f"\nRunning:\n{cmd}\n", flush=True)
@@ -160,7 +170,349 @@ def run_command(cmd, dry_run=False):
             f"Command failed:\n{cmd}"
         )
 
-def write_report(outprefix, title, pca_html, lai_html):
+#-----------------------------
+def extract_plotly_fragment(html_file):
+
+    with open(html_file) as fh:
+        text = fh.read()
+
+    body = re.search(
+        r"<body[^>]*>(.*)</body>",
+        text,
+        flags=re.S | re.I
+    )
+
+    if body:
+        text = body.group(1)
+
+    text = re.sub(
+        r'<script[^>]*plotly[^>]*></script>',
+        '',
+        text,
+        flags=re.S | re.I
+    )
+
+    return text
+
+#-----------------------------
+def write_embedded_report(
+    outprefix,
+    title,
+    pca_html,
+    lai_html
+):
+
+    report_file = f"{outprefix}.report.html"
+
+    lai_fragment = extract_plotly_fragment(
+        lai_html
+    )
+
+    pca_fragment = extract_plotly_fragment(
+        pca_html
+    )
+
+    js = r"""
+window.addEventListener(
+    "load",
+    function() {
+
+        const plots =
+            document.querySelectorAll(
+                ".plotly-graph-div"
+            );
+
+        console.log(
+            "Detected",
+            plots.length,
+            "Plotly plots"
+        );
+
+        if (plots.length < 2)
+            return;
+
+        const laiPlot = plots[0];
+        const pcaPlot = plots[1];
+
+        function getTraceColor(trace)
+        {
+
+            if (
+                trace.marker &&
+                trace.marker.color
+            )
+            {
+                return trace.marker.color;
+            }
+
+            if (
+                trace.line &&
+                trace.line.color
+            )
+            {
+                return trace.line.color;
+            }
+
+            return null;
+        }
+
+        function highlightLAIByColor(
+            targetColor
+        )
+        {
+
+           const opacities = [];
+
+           for (let i = 0; i < laiPlot.data.length; i++) {
+
+              const trace = laiPlot.data[i];
+
+              // 1. NEVER touch backbone
+              if (isBackboneTrace(trace)) {
+                 opacities.push(1.0);
+                 continue;
+              }
+
+              // 2. NEVER touch boundary separators (your "ticks")
+              if (isBackboneSeparator(trace)) {
+                  opacities.push(1.0);
+                  continue;
+              }
+
+              // 3. NEVER touch pie chart
+              if (trace.type === "pie") {
+                 opacities.push(1.0);
+                 continue;
+              }
+
+              const traceColor = getTraceColor(trace);
+
+               // 4. only ancestry-like traces participate
+              const isAncestryTrace =
+              (trace.marker || trace.line) &&
+              traceColor !== null;
+
+              if (!isAncestryTrace) {
+                 opacities.push(1.0);
+                 continue;
+              }
+
+              opacities.push(
+                 traceColor === targetColor ? 1.0 : 0.05
+              );
+           }
+
+           Plotly.restyle(
+               laiPlot,
+               {opacity: opacities}
+           );
+        }
+
+        function isBackboneTrace(trace) {
+           return trace.meta && typeof trace.meta === "string" && trace.meta.startsWith("BACKBONE");
+        }
+        function isBackboneSeparator(trace) {
+           return trace.meta === "BACKBONE_SEPARATOR";
+        }
+
+        laiPlot.on("plotly_click", (e) => {
+           if (!e.points?.length) resetLAI();
+        });
+
+        pcaPlot.on("plotly_legendclick", function(evt) {
+           const color = getTraceColor(pcaPlot.data[evt.curveNumber]);
+           if (color) highlightLAIByColor(color);
+           return true;
+        });
+
+        function resetLAI()
+        {
+
+            Plotly.restyle(
+                laiPlot,
+                {
+                    opacity:
+                        laiPlot.data.map(
+                            () => 1.0
+                        )
+                }
+            );
+
+        }
+
+        pcaPlot.on(
+            "plotly_hover",
+            function(evt)
+            {
+
+                console.log(
+                    evt.points[0]
+                );
+
+                const color =
+                    getTraceColor(
+                        evt.points[0].data
+                    );
+
+                console.log(
+                    "hover color:",
+                    color
+                );
+
+                if (color)
+                {
+                    highlightLAIByColor(
+                        color
+                    );
+                }
+
+            }
+        );
+
+        pcaPlot.on(
+            "plotly_unhover",
+            function()
+            {
+                resetLAI();
+            }
+        );
+
+        pcaPlot.on(
+            "plotly_legenddoubleclick",
+            function(evt)
+            {
+
+                const trace =
+                    pcaPlot.data[
+                        evt.curveNumber
+                    ];
+
+                const color =
+                    getTraceColor(
+                        trace
+                    );
+
+                if (color)
+                {
+                    highlightLAIByColor(
+                        color
+                    );
+                }
+
+                return false;
+
+            }
+        );
+
+    }
+);
+"""
+
+    html = f"""
+<html>
+
+<head>
+
+<title>{title}</title>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<style>
+
+body {{
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}}
+
+h1 {{
+    margin-bottom: 10px;
+}}
+
+.container {{
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    height: calc(100vh - 80px);
+}}
+
+.panel-lai {{
+    flex: 0 0 50%;
+    min-width: 0;
+}}
+
+.panel-pca {{
+    flex: 1 1 50%;
+    min-width: 0;
+}}
+
+
+.panel-lai h2,
+.panel-pca h2 {{
+    margin-top: 0;
+}}
+
+.panel-lai .plotly-graph-div {{
+    width: 100% !important;
+}}
+
+.panel-pca .plotly-graph-div {{
+    width: 100% !important;
+}}
+
+@media (max-width: 900px) {{
+
+    .container {{
+        flex-direction: column;
+        height: auto;
+    }}
+
+}}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>{title}</h1>
+
+<div class="container">
+
+    <div class="panel-lai">
+        <h2>Genome View</h2>
+        {lai_fragment}
+    </div>
+
+    <div class="panel-pca">
+        <h2>Population Context</h2>
+        {pca_fragment}
+    </div>
+
+</div>
+
+<script>
+{js}
+</script>
+
+</body>
+
+</html>
+"""
+
+    with open(
+        report_file,
+        "w"
+    ) as fh:
+
+        fh.write(html)
+
+    print(
+        f"Writing report: {report_file}"
+    )
+
+#-----------------------------
+def write_iframe_report(outprefix, title, pca_html, lai_html):
 
     report_file = f"{outprefix}.report.html"
 
@@ -258,7 +610,7 @@ iframe {{
 
     print(f"Writing report: {report_file}")
 
-
+#-----------------------------
 def is_valid_matrix(path):
     try:
         df = pd.read_csv(path, sep="\t", nrows=1)
@@ -266,7 +618,17 @@ def is_valid_matrix(path):
     except Exception:
         return False
 
+#-----------------------------
+def normalize_plot_ids(html):
 
+    matches = re.findall(
+        r'plotly-graph-div[^>]*id="([^"]+)"',
+        html
+    )
+
+    return matches
+
+#-----------------------------
 def main():
 
     args = set_up_parser().parse_args()
@@ -507,12 +869,23 @@ def main():
 
     if not args.dry_run:
 
-        write_report(
-            args.outprefix,
-            args.report_title,
-            pca_html,
-            lai_html
-        )
+        if args.report_mode == "iframe":
+
+            write_iframe_report(
+                args.outprefix,
+                args.report_title,
+                pca_html,
+                lai_html
+            )
+
+        else:
+
+            write_embedded_report(
+                args.outprefix,
+                args.report_title,
+                pca_html,
+                lai_html
+            )
 
         print("\nDone KORUS!")
 
