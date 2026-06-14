@@ -940,7 +940,7 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     # -------------------------
     # References
     # -------------------------
-    for lab in df[df["type"] == "reference"]["label"].unique():
+    for lab in sorted(df[df["type"] == "reference"]["label"].unique()):
 
         sub = df[(df["type"] == "reference") & (df["label"] == lab)]
 
