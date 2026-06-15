@@ -27,9 +27,10 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 9. [Inputs](#inputs)  
 10. [Outputs](#outputs)  
 11. [Workflow Overview](#workflow-overview)  
-12. [Demo](#demo)  
-13. [Citing](#citing)  
-14. [License](#license)  
+12. [End-to-end pipeline (korus)](#pipeline)
+13. [Demo](#demo)  
+14. [Citing](#citing)  
+15. [License](#license)  
 
 ---
 
@@ -49,7 +50,7 @@ KORUS converts k-mer presence in Bloom filters into per-window scalar signals (A
 
 ## Credit <a name="credit"></a>
 
-Developed by XX, XX and René L Warren.
+Developed by René L Warren.
 
 ---
 
@@ -246,7 +247,7 @@ korusMatrix.py: the following arguments are required: --bf_dir, --kmer_file, --o
 
 ```bash
 usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS]
-                          [--k K] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
+                          [--c C] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
                           [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [-V]
 korusDecode.py: the following arguments are required: --ref, --sample, --outprefix
 
@@ -256,7 +257,7 @@ korusDecode.py: the following arguments are required: --ref, --sample, --outpref
   --sample sampleMatrix.tsv 
   --labels korusModelLabels.tsv
   --fractions korusModelLabelsFractions.tsv.gz
-  --k 5 KMeans n_clusters
+  --c 5 KMeans n_clusters
   --outprefix korus_run
   --stay_prob 0.98
 ```
@@ -325,6 +326,90 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 4. PCA embedding
 5. Probabilistic classification
 6. Optional smoothing (DECODE)
+7. Report generation (korus pipeline, below)
+
+---
+
+## End-to-end korus pipeline <a name="pipeline"></a>
+
+In addition to the modular workflow (`korusMatrix.py` → `korusDecode.py`), KORUS provides a single-entry driver script:
+
+```bash
+./korus \
+  --reads SAMPLE_PREFIX \
+  --kmer_file snv_kmers.tsv \
+  -k 55 \
+  --outprefix run1 \
+  --mode hard
+```
+
+### What it does
+
+The `korus` driver orchestrates the full analysis chain for single-sample ancestry inference.
+
+### Pipeline stages
+
+#### 1. korusEncode (internal call)
+- Builds a k-mer Bloom filter–derived feature matrix from input reads
+- Generates the sample × genomic window representation used for inference
+
+#### 2. korusDecode.py
+- Performs ancestry inference using one of:
+  - hard supervision
+  - soft supervision
+  - unsupervised (KMeans-based initialization)
+
+#### 3. plot_ntroot_lai.py (ntRoot dependency)
+- Generates interactive local ancestry inference (LAI) visualizations
+
+#### 4. HTML report generation
+- Produces a combined PCA + LAI report:
+  - `*.report.html`
+- Supported layouts:
+  - iframe mode (default)
+  - embedded mode (`--report_mode embed`)
+
+---
+
+### Modes
+
+#### `--mode hard`
+- Uses discrete reference labels (`--labels`)
+- Performs supervised ancestry classification
+
+#### `--mode soft`
+- Uses fractional ancestry supervision (`--fractions`)
+- Supports admixed reference modeling
+
+#### `--mode unsupervised`
+- Uses KMeans initialization (`--c`)
+- Operates without explicit ancestry labels
+
+---
+
+### Output
+
+For a single-sample run, the pipeline produces:
+
+- `*.lai.tsv` — local ancestry inference results
+- `*.pca3d.html` — population context (PCA embedding)
+- `*.lai.html` — interactive genome view
+- `*.report.html` — combined PCA + LAI report
+
+---
+
+### Dependency note
+
+The pipeline requires:
+
+- `plot_ntroot_lai.py` (from ntRoot)
+
+Available via:
+- https://github.com/BirolLab/ntroot
+- Conda:
+  ```bash
+  conda install -c bioconda -c conda-forge ntroot
+  ```
 
 ---
 
