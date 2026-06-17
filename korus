@@ -404,6 +404,27 @@ window.addEventListener(
             }
         );
 
+        // ** Commented out for now, if legend function needs to be disabled:
+
+        // Add to <style> block in write_embedded_report:
+        // .panel-lai .legend {
+        //    pointer-events: none;
+        //    cursor: default;
+        // }
+
+        // laiPlot.on("plotly_legendclick", function() {
+        //    selectedAnc = null;
+        //    Plotly.restyle(laiPlot, {opacity: laiPlot.data.map(() => 1.0)});
+        //    return false;
+        // });
+
+        // laiPlot.on("plotly_legenddoubleclick", function() {
+        //    selectedAnc = null;
+        //    Plotly.restyle(laiPlot, {opacity: laiPlot.data.map(() => 1.0)});
+        //    return false;
+        // });
+
+
     }
 );
 """
