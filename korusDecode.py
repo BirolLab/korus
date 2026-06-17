@@ -557,8 +557,8 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
     # Plot query samples
     # -------------------------
     for i, name in enumerate(X_sample_names):
-        plt.scatter(X_sample_pca[i, 0], X_sample_pca[i, 1], c="black", marker="x", s=120)
-        plt.text(X_sample_pca[i, 0], X_sample_pca[i, 1], name, fontsize=9, fontweight="bold")
+        plt.scatter(X_sample_pca[i, 0], X_sample_pca[i, 1], c="black", marker="x", s=100)
+        plt.text(X_sample_pca[i, 0], X_sample_pca[i, 1], name, fontsize=7, fontweight="bold")
 
     # -------------------------
     # Build legend (ancestries)
@@ -574,7 +574,7 @@ def plot_pca(X_ref_pca, labels, clusters, X_sample_pca, X_sample_names, outprefi
             color = dynamic_color_map.get(anc, "#999999")
         plt.scatter([], [], c=color, label=anc)
 
-    plt.scatter([], [], c="black", marker="x", s=120, label="query")
+    plt.scatter([], [], c="black", marker="x", s=100, label="query")
 
     plt.xlabel("PC1")
     plt.ylabel("PC2")
@@ -654,7 +654,9 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, titl
                 X_ref_pca[i, 2],
                 c=color,
                 s=12,
-                alpha=0.7
+                alpha=0.7,
+                depthshade=False,
+                zorder=1
             )
 
             ax.text(
@@ -698,7 +700,9 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, titl
                 X_ref_pca[i, 2],
                 c=color,
                 s=20,
-                alpha=0.6
+                alpha=0.6,
+                depthshade=False,
+                zorder=1
             )
 
             ax.text(
@@ -732,21 +736,25 @@ def plot_pca_3d(X_ref, X_sample, labels, clusters, sample_names, outprefix, titl
             X_sample_pca[i, 2],
             c="black",
             marker="x",
-            s=120
+            s=100,
+            depthshade=False,
+            zorder=1000
         )
         ax.text(
             X_sample_pca[i, 0],
             X_sample_pca[i, 1],
             X_sample_pca[i, 2],
             name,
-            fontsize=9,
-            fontweight="bold"
+            fontsize=7,
+            fontweight="bold",
+            zorder=1001,
+            clip_on=False
         )
 
     # -------------------------
     # FINAL LEGEND (ONLY ONCE)
     # -------------------------
-    ax.scatter([], [], [], c="black", marker="x", s=120, label="query")
+    ax.scatter([], [], [], c="black", marker="x", s=100, label="query")
 
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
@@ -992,6 +1000,11 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
     # -------------------------
     fig.update_layout(
         autosize=True,
+        scene=dict(
+            xaxis_title="PC1",
+            yaxis_title="PC2",
+            zaxis_title="PC3"
+        ),
         title=dict(
             text=title,
             x=0.5,
@@ -1033,7 +1046,7 @@ def plot_pca_fraction_2d(X_ref_pca, entropy_vals, X_sample_pca, X_sample_names, 
         cmap=cmap,
         norm=norm,
         s=15,
-        alpha=0.8
+        alpha=0.7
     )
 
     # -------------------------
@@ -1044,7 +1057,7 @@ def plot_pca_fraction_2d(X_ref_pca, entropy_vals, X_sample_pca, X_sample_names, 
         X_sample_pca[:, 1],
         c="black",
         marker="x",
-        s=120,
+        s=100,
         label="query"
     )
 
@@ -1053,7 +1066,7 @@ def plot_pca_fraction_2d(X_ref_pca, entropy_vals, X_sample_pca, X_sample_names, 
             X_sample_pca[i, 0],
             X_sample_pca[i, 1],
             name,
-            fontsize=9,
+            fontsize=7,
             fontweight="bold"
         )
 
@@ -1117,7 +1130,9 @@ def plot_pca_fraction_3d(X_ref, X_sample, entropy_vals, sample_names, outprefix,
         cmap=cmap,
         norm=norm,
         s=15,
-        alpha=0.8
+        alpha=0.8,
+        depthshade=False,
+        zorder=1
     )
 
     # -------------------------
@@ -1129,8 +1144,10 @@ def plot_pca_fraction_3d(X_ref, X_sample, entropy_vals, sample_names, outprefix,
         X_sample_pca[:, 2],
         c="black",
         marker="x",
-        s=120,
-        label="query"
+        s=100,
+        label="query",
+        depthshade=False,
+        zorder=1000
     )
 
     for i, name in enumerate(sample_names):
@@ -1140,8 +1157,10 @@ def plot_pca_fraction_3d(X_ref, X_sample, entropy_vals, sample_names, outprefix,
             X_sample_pca[i, 1],
             X_sample_pca[i, 2],
             name,
-            fontsize=9,
-            fontweight="bold"
+            fontsize=7,
+            fontweight="bold",
+            zorder=1001,
+            clip_on=False
         )
 
     # -------------------------
