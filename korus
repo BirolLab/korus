@@ -234,6 +234,16 @@ window.addEventListener(
         const laiPlot = plots[0];
         const pcaPlot = plots[1];
 
+        document
+            .getElementById("reset-lai-btn")
+            .addEventListener(
+                "click",
+                function() {
+                    location.reload();
+                }
+            );
+
+
         function getTraceColor(trace)
         {
 
@@ -404,27 +414,6 @@ window.addEventListener(
             }
         );
 
-        // ** Commented out for now, if legend function needs to be disabled:
-
-        // Add to <style> block in write_embedded_report:
-        // .panel-lai .legend {
-        //    pointer-events: none;
-        //    cursor: default;
-        // }
-
-        // laiPlot.on("plotly_legendclick", function() {
-        //    selectedAnc = null;
-        //    Plotly.restyle(laiPlot, {opacity: laiPlot.data.map(() => 1.0)});
-        //    return false;
-        // });
-
-        // laiPlot.on("plotly_legenddoubleclick", function() {
-        //    selectedAnc = null;
-        //    Plotly.restyle(laiPlot, {opacity: laiPlot.data.map(() => 1.0)});
-        //    return false;
-        // });
-
-
     }
 );
 """
@@ -481,6 +470,19 @@ h1 {{
     width: 100% !important;
 }}
 
+.panel-header {{
+    display: flex;
+    align-items: center;
+}}
+
+.panel-header h2 {{
+    margin: 0;
+}}
+
+#reset-lai-btn {{
+    margin-left: auto;
+}}
+
 @media (max-width: 900px) {{
 
     .container {{
@@ -501,8 +503,16 @@ h1 {{
 <div class="container">
 
     <div class="panel-lai">
-        <h2>Genome View</h2>
+
+        <div class="panel-header">
+            <h2>Genome View</h2>
+            <button id="reset-lai-btn">
+                Reset
+            </button>
+        </div>
+
         {lai_fragment}
+
     </div>
 
     <div class="panel-pca">
@@ -573,8 +583,7 @@ h1 {{
 
 /* Section titles */
 .panel h2 {{
-    margin: 0 0 10px 0;
-    font-size: 22px;
+    margin-top: 0; 
 }}
 
 /* Responsive iframe */
