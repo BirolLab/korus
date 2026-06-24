@@ -247,9 +247,10 @@ korusMatrix.py: the following arguments are required: --bf_dir, --kmer_file, --o
 ### 2. DECODE stage
 
 ```bash
-usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS]
-                          [--c C] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
-                          [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [-V]
+usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C]
+                      [--pca_components PCA_COMPONENTS] --outprefix OUTPREFIX
+                      [--window_radius WINDOW_RADIUS] [--require_full_window] [--stay_prob STAY_PROB]
+                      [--no_hmm] [--pca-components PCA_COMPONENTS] [-V]
 korusDecode.py: the following arguments are required: --ref, --sample, --outprefix
 
 ./korusDecode.py 
@@ -342,6 +343,15 @@ In addition to the modular workflow (`korusMatrix.py` → `korusDecode.py`), KOR
   -k 55 \
   --outprefix run1 \
   --mode hard
+```
+
+```
+usage: korus [-h] --reads READS [--report_mode {iframe,embed}] --kmer_file KMER_FILE -k {45,55}
+             [--tile TILE] [-t T] [--mode {hard,soft,unsupervised}] [--c C]
+             [--pca_components PCA_COMPONENTS] [--window_radius WINDOW_RADIUS] [--stay_prob STAY_PROB]
+             [--no_hmm] --outprefix OUTPREFIX [--report_title REPORT_TITLE] [-n] [-V] [--ref REF]
+             [--labels LABELS] [--fractions FRACTIONS]
+korus: the following arguments are required: --reads, --kmer_file, -k, --outprefix
 ```
 
 ### What it does

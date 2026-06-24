@@ -29,7 +29,7 @@ import shutil
 import re
 
 
-KORUS_VERSION = "v0.2.7"
+KORUS_VERSION = "v0.2.8"
 
 #-----------------------------
 def set_up_parser():
@@ -96,6 +96,12 @@ def set_up_parser():
         type=int,
         default=None,
         help="KMeans n_clusters (unsupervised mode)"
+    )
+
+    parser.add_argument("--pca_components",
+        type=int,
+        default=10,
+        help="Number of PCA dimensions used for unsupervised clustering (default: 10)"
     )
 
     parser.add_argument(
@@ -830,6 +836,11 @@ def main():
             decode_cmd += (
                 f" --c {args.c}"
             )
+
+        decode_cmd += (
+            f" --pca_components {args.pca_components}"
+        )
+
 
     if args.no_hmm:
 

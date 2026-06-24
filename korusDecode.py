@@ -22,7 +22,7 @@ import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v0.2.3"
+KORUSDECODE_VERSION = "v0.2.4"
 
 # Define cluster colors
 UNSUPERVISED_PALETTE = [
@@ -445,6 +445,34 @@ def run_pca(X_ref, X_sample, n_components=2):
 
     # Project samples into same PCA space
     X_sample_scaled = scaler.transform(X_sample)
+    X_sample_pca = pca.transform(X_sample_scaled)
+
+    return X_ref_pca, X_sample_pca
+
+# -------------------------
+# Inference PCA
+# -------------------------
+def run_inference_pca(X_ref, X_sample, n_components):
+
+    scaler = StandardScaler()
+
+    X_ref_scaled = scaler.fit_transform(X_ref)
+
+    n_pc = min(
+        n_components,
+        X_ref.shape[0] - 1,
+        X_ref.shape[1]
+    )
+
+    pca = PCA(
+        n_components=n_pc,
+        svd_solver="full"
+    )
+
+    X_ref_pca = pca.fit_transform(X_ref_scaled)
+
+    X_sample_scaled = scaler.transform(X_sample)
+
     X_sample_pca = pca.transform(X_sample_scaled)
 
     return X_ref_pca, X_sample_pca
@@ -1731,6 +1759,11 @@ def main():
     parser.add_argument("--c", type=int, default=5,
                         help="KMeans n_clusters")
 
+    parser.add_argument("--pca_components",
+                        type=int,
+                        default=10,
+                        help="Number of PCA dimensions used for unsupervised clustering (default: 10)")
+
     parser.add_argument("--outprefix", required=True,
                         help="Output prefix")
 
@@ -1749,6 +1782,11 @@ def main():
     parser.add_argument("--no_hmm",
                         action="store_true",
                         help="Disable HMM smoothing")
+
+    parser.add_argument("--pca-components",
+                        type=int,
+                        default=10,
+                        help="Number of PCs used for unsupervised clustering (default: 10)")
 
     parser.add_argument("-V", "--version",
                         action="version",
@@ -1871,9 +1909,12 @@ def main():
 
     else:
         # unsupervised mode
-        print("Running unsupervised KMeans mode...")
+        print(
+            f"Running unsupervised KMeans mode "
+            f"(k={args.c}, PCA dimensions={args.pca_components})..."
+        )
 
-        X_ref_pca, _ = run_pca(X_ref, X_sample)
+        X_ref_pca, _ = run_inference_pca(X_ref, X_sample, args.pca_components)
 
         clusters, kmeans_model = run_kmeans(
             X_ref_pca,
