@@ -98,10 +98,18 @@ def set_up_parser():
         help="KMeans n_clusters (unsupervised mode)"
     )
 
-    parser.add_argument("--pca_components",
+    parser.add_argument(
+        "--global_pcs",
         type=int,
         default=10,
-        help="Number of PCA dimensions used for unsupervised clustering (default: 10)"
+        help="Number of PCs used for unsupervised K-means clustering"
+    )
+
+    parser.add_argument(
+        "--local_pcs",
+        type=int,
+        default=10,
+        help="Maximum number of PCs used for local Mahalanobis ancestry inference"
     )
 
     parser.add_argument(
@@ -808,6 +816,10 @@ def main():
         f"--outprefix {args.outprefix}"
     )
 
+    decode_cmd += (
+        f" --local_pcs {args.local_pcs}"
+    )
+
     if args.window_radius is not None:
         decode_cmd += (
             f" --window_radius {args.window_radius}"
@@ -838,9 +850,8 @@ def main():
             )
 
         decode_cmd += (
-            f" --pca_components {args.pca_components}"
+            f" --global_pcs {args.global_pcs}"
         )
-
 
     if args.no_hmm:
 

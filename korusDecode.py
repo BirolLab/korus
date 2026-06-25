@@ -303,6 +303,7 @@ def window_fractional_assignment(
     X_ref,
     X_sample,
     frac_labels,
+    local_pcs=10,
     knn_mode="window",
     window_radius=3,
     require_full_window=False
@@ -354,7 +355,7 @@ def window_fractional_assignment(
         # PCA stabilization
         # -------------------------
         n_comp = min(
-            10,
+            local_pcs,
             X_train.shape[1],
             X_train.shape[0] - 1
         )
@@ -912,7 +913,8 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
                 "PC3": X_ref_pca[i, 2],
                 "label": plot_label,
                 "type": "reference",
-                "name": f"ref_{i}",
+                #"name": f"ref_{i}",
+                "name": X_ref.index[i],
                 "cluster": plot_label
             })
 
@@ -1432,7 +1434,17 @@ def plot_pca_fraction_3dint(X_ref, X_sample, entropy_vals, sample_names, outpref
 # -------------------------
 # Mahalanobis-based LAI assignment
 # -------------------------
-def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_radius=3, require_full_window=False, kmeans_labels=None):
+def window_cluster_assignment(
+    X_ref,
+    X_sample,
+    y,
+    k,
+    local_pcs=10,
+    knn_mode="window",
+    window_radius=3,
+    require_full_window=False,
+    kmeans_labels=None
+):
 
     # Per-sample storage of predictions and probabilities
     preds_all = [[] for _ in range(X_sample.shape[0])]
@@ -1481,7 +1493,7 @@ def window_cluster_assignment(X_ref, X_sample, y, k, knn_mode="window", window_r
         X_test = scaler.transform(X_test)
 
         # PCA dimensionality reduction for numerical stability
-        n_comp = min(10, X_train.shape[1], X_train.shape[0] - 1)
+        n_comp = min(local_pcs, X_train.shape[1], X_train.shape[0] - 1)
         pca = PCA(n_components=n_comp)
         Z_train = pca.fit_transform(X_train)
         Z_test = pca.transform(X_test)
@@ -1759,11 +1771,6 @@ def main():
     parser.add_argument("--c", type=int, default=5,
                         help="KMeans n_clusters")
 
-    parser.add_argument("--pca_components",
-                        type=int,
-                        default=10,
-                        help="Number of PCA dimensions used for unsupervised clustering (default: 10)")
-
     parser.add_argument("--outprefix", required=True,
                         help="Output prefix")
 
@@ -1783,10 +1790,15 @@ def main():
                         action="store_true",
                         help="Disable HMM smoothing")
 
-    parser.add_argument("--pca-components",
+    parser.add_argument("--global_pcs",
                         type=int,
                         default=10,
-                        help="Number of PCs used for unsupervised clustering (default: 10)")
+                        help="Number of PCs used for unsupervised K-means clustering")
+
+    parser.add_argument("--local_pcs",
+                        type=int,
+                        default=10,
+                        help="Maximum number of PCs used for local Mahalanobis ancestry inference")
 
     parser.add_argument("-V", "--version",
                         action="version",
@@ -1882,6 +1894,7 @@ def main():
                 X_ref,
                 X_sample,
                 frac_labels,
+                local_pcs=args.local_pcs,
                 knn_mode="window",
                 window_radius=args.window_radius,
                 require_full_window=args.require_full_window
@@ -1899,6 +1912,7 @@ def main():
                 X_sample,
                 y_in,
                 args.c,
+                local_pcs=args.local_pcs,
                 knn_mode="window",
                 window_radius=args.window_radius,
                 require_full_window=args.require_full_window,
@@ -1911,15 +1925,30 @@ def main():
         # unsupervised mode
         print(
             f"Running unsupervised KMeans mode "
-            f"(k={args.c}, PCA dimensions={args.pca_components})..."
+            f"(k={args.c}, PCA dimensions={args.global_pcs})..."
         )
 
-        X_ref_pca, _ = run_inference_pca(X_ref, X_sample, args.pca_components)
+        X_ref_pca, _ = run_inference_pca(X_ref, X_sample, args.global_pcs)
 
         clusters, kmeans_model = run_kmeans(
             X_ref_pca,
             k=args.c
         )
+
+        cluster_df = pd.DataFrame({
+            "reference_id": X_ref.index,
+            "cluster": [f"C{i+1}" for i in clusters]
+        })
+
+        cluster_out = args.outprefix + ".reference_clusters.tsv"
+
+        cluster_df.to_csv(
+            cluster_out,
+            sep="\t",
+            index=False
+        )
+
+        print(f"\tWriting reference clusters to: {cluster_out}")
 
         preds_all, probs_all, classes = \
             window_cluster_assignment(
@@ -1927,6 +1956,7 @@ def main():
                 X_sample,
                 None,
                 args.c,
+                local_pcs=args.local_pcs,
                 knn_mode="window",
                 window_radius=args.window_radius,
                 require_full_window=args.require_full_window,
