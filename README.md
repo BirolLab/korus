@@ -221,21 +221,25 @@ The following standard-library modules are used and do not require installation:
 
 The SNV-to-signal encode runs via the `korusEncode` snakemake (runs `ntCard`, `ntStat` and `korusMatrix.py`):
 ```bash
-
 usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--tile TILE] [-t T] [-n] [-f] [-V]
 korusEncode: the following arguments are required: --reads, --kmer_file, -k 
+```
 
+```
 ./korusEncode
   --reads Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)
   --kmer_file snv_kmers.tsv
   -k 55
   -t 48
+```
 
-
+```
 usage: korusMatrix.py [-h] --bf_dir BF_DIR --kmer_file KMER_FILE --output_matrix OUTPUT_MATRIX
                       [--window_size WINDOW_SIZE] [--k K] [-V]
 korusMatrix.py: the following arguments are required: --bf_dir, --kmer_file, --output_matrix
+```
 
+```
 ./korusMatrix.py 
   --bf_dir /path/to/bloom_filters 
   --snv_kmers snv_kmers.tsv 
@@ -252,7 +256,9 @@ usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fracti
                       [--stay_prob STAY_PROB] [--no_hmm] [--global_pcs GLOBAL_PCS]
                       [--local_pcs LOCAL_PCS] [-V]
 korusDecode.py: the following arguments are required: --ref, --sample, --outprefix
+```
 
+```
 ./korusDecode.py 
   [-h]
   --ref korusModelMatrixk55.tsv 
@@ -337,11 +343,11 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 In addition to the modular workflow (`korusMatrix.py` → `korusDecode.py`), KORUS provides a single-entry driver script:
 
 ```bash
-./korus \
-  --reads SAMPLE_PREFIX \
-  --kmer_file snv_kmers.tsv \
-  -k 55 \
-  --outprefix run1 \
+./korus
+  --reads SAMPLE_PREFIX
+  --kmer_file snv_kmers.tsv
+  -k 55
+  --outprefix run1
   --mode hard
 ```
 
