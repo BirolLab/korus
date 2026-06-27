@@ -140,7 +140,7 @@ When using --fractions, the ancestry space is constrained to the ancestry column
 - Dimensionality reduction (PCA)
 - Distance-based classification (Mahalanobis)
 - Softmax normalization of ancestry likelihoods (Distance-to-probability transformation)
-- Optional unsupervised cluster initialization (KMeans)
+- Optional unsupervised reference clustering (K-means) 
 - Spatial smoothing (HMM / Viterbi)
 
 **Output:**
@@ -259,15 +259,20 @@ korusDecode.py: the following arguments are required: --ref, --sample, --outpref
 ```
 
 ```
-./korusDecode.py 
-  [-h]
-  --ref korusModelMatrixk55.tsv 
-  --sample sampleMatrix.tsv 
+./korusDecode.py
+  --ref korusModelMatrixk55.tsv
+  --sample sampleMatrix.tsv
   --labels korusModelLabels.tsv
   --fractions korusModelLabelsFractions.tsv.gz
-  --c 5 KMeans n_clusters
+  --c 5
+  --global_pcs 10
+  --local_pcs 10
   --outprefix korus_run
   --stay_prob 0.98
+```
+
+```
+PCA parameters. --global_pcs specifies the number of principal components used during unsupervised K-means clustering of the reference panel. --local_pcs specifies the maximum number of principal components retained for the window-level Mahalanobis ancestry inference performed during local ancestry assignment. These parameters control distinct PCA operations and may be adjusted independently.
 ```
 
 ---
@@ -316,6 +321,9 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 
 ### Local ancestry outputs
 - .SAMPLE.lai.tsv   
+
+### Unsupervised mode (additional output)
+- .reference_clusters.tsv — reference sample IDs and their inferred K-means cluster assignments
 
 ### Visualizations
 - PCA plots  
@@ -399,7 +407,7 @@ The `korus` driver orchestrates the full analysis chain for single-sample ancest
 - Supports admixed reference modeling
 
 #### `--mode unsupervised`
-- Uses KMeans initialization (`--c`)
+- Partitions the reference panel into --c K-means clusters and uses the resulting cluster assignments as pseudo-labels for ancestry inference 
 - Operates without explicit ancestry labels
 
 ---
