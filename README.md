@@ -454,8 +454,8 @@ These HTML files allow exploration of population structure under different infer
   [Interactive PCA (soft / fractions)](https://www.birollab.ca/viz/korus7Esoft.fractions.pca3d.html)
 
 - **Unsupervised mode**
-  [Interactive PCA (unsupervised)](https://www.birollab.ca/viz/korus7Eunsup.pca3d.html)
-
+  [Interactive PCA (unsupervised K=5)](https://www.birollab.ca/viz/korus7Eunsup.pca3d.html)
+  [Interactive PCA (unsupervised K=7)](https://www.birollab.ca/viz/korus7EunsupC7.pca3d.html)
 ---
 
 ### Local ancestry (LAI) visualization
