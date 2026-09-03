@@ -599,7 +599,7 @@ h1 {{
 
 /* Section titles */
 .panel h2 {{
-    margin-top: 0; 
+    margin: 0; 
 }}
 
 /* Responsive iframe */
