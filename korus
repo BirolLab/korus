@@ -530,7 +530,9 @@ h1 {{
     </div>
 
     <div class="panel-pca">
-        <h2>Population Context</h2>
+        <div class="panel-header">
+            <h2>Population Context</h2>
+        </div>
         {pca_fragment}
     </div>
 
