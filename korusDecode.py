@@ -22,7 +22,7 @@ import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v0.2.4"
+KORUSDECODE_VERSION = "v0.2.5"
 
 # Define cluster colors
 UNSUPERVISED_PALETTE = [
@@ -248,37 +248,38 @@ def estimate_weighted_gaussians(Z_train, frac_df, classes, reg=1e-3):
     """
     Estimate weighted ancestry-specific Gaussian parameters.
 
-    Parameters
-    ----------
-    Z_train : ndarray
-        PCA-transformed training matrix
-
-    frac_df : DataFrame
-        ancestry fractions indexed identically to training samples
-
-    classes : list
-        ancestry names
-
-    Returns
-    -------
-    means : dict
-    covs  : dict
+    Prints diagnostic information about the fractional training
+    populations but otherwise preserves the original behavior.
     """
 
     means = {}
     covs = {}
 
+    print("\nWeighted Gaussian diagnostics:")
+
     for c in classes:
 
         weights = frac_df[c].values.astype(float)
 
-        if np.sum(weights) <= 0:
+        weight_sum = np.sum(weights)
+
+        if weight_sum <= 0:
             continue
 
-        # weighted mean
-        mu = np.average(Z_train, axis=0, weights=weights)
+        # Effective sample size
+        neff = (
+            weight_sum ** 2 /
+            np.sum(weights ** 2)
+        )
 
-        # weighted covariance
+        # Weighted mean
+        mu = np.average(
+            Z_train,
+            axis=0,
+            weights=weights
+        )
+
+        # Weighted covariance
         diff = Z_train - mu
 
         cov = np.einsum(
@@ -286,10 +287,29 @@ def estimate_weighted_gaussians(Z_train, frac_df, classes, reg=1e-3):
             weights,
             diff,
             diff
-        ) / np.sum(weights)
+        ) / weight_sum
 
-        # regularization
+        # Regularization
         cov += np.eye(cov.shape[0]) * reg
+
+        # Diagnostics
+        mean_variance = np.mean(np.diag(cov))
+
+        sign, logdet = np.linalg.slogdet(cov)
+
+        if sign <= 0:
+            raise ValueError(
+                f"Covariance matrix for {c} "
+                f"is not positive definite"
+            )
+
+        print(
+            f"  {c:4s} "
+            f"sum={weight_sum:10.2f} "
+            f"Neff={neff:10.2f} "
+            f"meanVar={mean_variance:10.5f} "
+            f"logdet={logdet:10.3f}"
+        )
 
         means[c] = mu
         covs[c] = np.linalg.inv(cov)
@@ -313,7 +333,6 @@ def window_fractional_assignment(
     probs_all = [[] for _ in range(X_sample.shape[0])]
 
     cols_list = list(X_ref.columns)
-
     classes = np.array(list(frac_labels.columns))
 
     for i in range(len(cols_list)):
@@ -321,14 +340,13 @@ def window_fractional_assignment(
         # -------------------------
         # Window selection
         # -------------------------
+
         if knn_mode == "raw":
             cols = [cols_list[i]]
 
         elif knn_mode == "window":
-
             start = max(0, i - window_radius)
             end = min(len(cols_list), i + window_radius + 1)
-
             cols = cols_list[start:end]
 
             if require_full_window and len(cols) != (2 * window_radius + 1):
@@ -343,17 +361,18 @@ def window_fractional_assignment(
         # -------------------------
         # Data extraction
         # -------------------------
+
         X_train = X_ref[cols].values
         X_test = X_sample[cols].values
 
         scaler = StandardScaler()
-
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
         # -------------------------
         # PCA stabilization
         # -------------------------
+
         n_comp = min(
             local_pcs,
             X_train.shape[1],
@@ -368,6 +387,7 @@ def window_fractional_assignment(
         # -------------------------
         # Weighted Gaussian estimation
         # -------------------------
+
         means, covs = estimate_weighted_gaussians(
             Z_train,
             frac_labels,
@@ -375,28 +395,59 @@ def window_fractional_assignment(
         )
 
         # -------------------------
+        # Calculate log determinants
+        # -------------------------
+
+        logdets = {}
+
+        for c in classes:
+            # estimate_weighted_gaussians() returns the inverse
+            # covariance matrix, so recover the covariance matrix
+            # for calculation of log|Sigma|.
+            cov_inv = covs[c]
+
+            sign, logdet_inv = np.linalg.slogdet(cov_inv)
+
+            if sign <= 0:
+                raise ValueError(
+                    f"Inverse covariance matrix for {c} "
+                    f"is not positive definite"
+                )
+
+            # log|Sigma| = -log|Sigma^-1|
+            logdets[c] = -logdet_inv
+
+        # -------------------------
         # Classify samples
         # -------------------------
+
         for s in range(Z_test.shape[0]):
 
             z = Z_test[s]
-
             scores = []
 
             for c in classes:
 
                 diff = z - means[c]
 
+                # Mahalanobis distance
                 dist = diff @ covs[c] @ diff
 
-                score = -0.5 * dist
+                # Full Gaussian log-likelihood
+                # (common -d/2*log(2*pi) term omitted)
+                score = -0.5 * (
+                    dist + logdets[c]
+                )
 
                 scores.append(score)
 
             scores = np.array(scores)
 
-            # softmax normalization
-            exp_scores = np.exp(scores - np.max(scores))
+            # Softmax normalization
+            exp_scores = np.exp(
+                scores - np.max(scores)
+            )
+
             probs = exp_scores / exp_scores.sum()
 
             pred = classes[np.argmax(probs)]
