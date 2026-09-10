@@ -441,7 +441,7 @@ Available via:
 
 ## Interactive visualizations <a name="viz"></a>
 
-As part of `korusDecode.py`, KORUS generates interactive PCA visualizations that position the query sample in relation to reference populations in ancestry space.
+As part of `korusDecode.py`, KORUS generates interactive PCA visualizations that position the query sample in relation to reference populations in ancestry space. Below visualization examples show sample ERR3988858 from Puerto Rico.
 
 ### PCA visualizations
 
