@@ -8,7 +8,7 @@
 
 K-mer Orthogonal Representation for Unified Stratification (of ancestry) — an orthogonalized ancestry feature representation in PCA-reduced space
 
-KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions.
+KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions
 
 ## Feature Matrix → Probabilistic Decode Framework for Genomic Ancestry Inference
 
