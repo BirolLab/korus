@@ -27,8 +27,8 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 9. [Inputs](#inputs)  
 10. [Outputs](#outputs)  
 11. [Workflow Overview](#workflow-overview)  
-12. [End-to-end pipeline (korus)](#pipeline)
-13. [Interactive visualizations](#viz)
+12. [End-to-End Pipeline (korus)](#pipeline)
+13. [Interactive Visualizations](#viz)
 14. [Demo](#demo)  
 15. [Citing](#citing)  
 16. [License](#license)  
@@ -40,7 +40,7 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions.
 
 
-### Key methodological features <a name="features"></a>
+### Key Methodological Features <a name="features"></a>
 
 - k-mer/Bloom-filter ancestry representation
 - Reference-free signal extraction
@@ -51,7 +51,8 @@ KORUS converts k-mer presence in Bloom filters into per-window scalar signals (A
 
 ## Credit <a name="credit"></a>
 
-Developed by René L Warren.
+Developed by René L Warren
+
 
 ---
 
@@ -91,7 +92,7 @@ Continuous genomic feature matrix across samples and windows
 
 Performs probabilistic inference of ancestry from the feature matrix.
 
-#### Hard supervision (--labels)
+#### Hard Supervision (--labels)
 
 Each reference sample is assigned a single discrete ancestry class.
 
@@ -107,7 +108,7 @@ In practice this behaves similarly to:
 with optional HMM smoothing across genomic windows.
 
 
-#### Soft supervision (--fractions)
+#### Soft Supervision (--fractions)
 
 Each reference sample contributes fractional ancestry memberships rather than a single categorical label.
 
@@ -128,7 +129,7 @@ Conceptually, this behaves like:
 
 rather than categorical classification.
 
-#### Hard vs soft supervision behavior
+#### Hard vs Soft Supervision Behavior
 
 When using --labels, KORUS can model any discrete ancestry category represented in the reference labels.
 
@@ -173,7 +174,7 @@ chmod +x korusMatrix.py korusDecode.py
 Alternatively, installation can be performed within a Conda environment.
 ---
 
-## Tested environment
+## Tested Environment
 
 KORUS was developed and tested on:
 - Rocky Linux 9.6 (Blue Onyx)
@@ -194,7 +195,7 @@ KORUS was developed and tested on:
 - matplotlib
 - plotly
 
-### Input data requirements
+### Input Data Requirements
 KORUS expects Bloom filters generated using a compatible ntHash/ntCard/ntEdit-style workflow.
 
 Compatible `.bf` files can be generated using:
@@ -217,7 +218,7 @@ The following standard-library modules are used and do not require installation:
 
 ## Usage <a name="usage"></a>
 
-### 1. MATRIX stage
+### 1. MATRIX Stage
 
 The SNV-to-signal encode runs via the `korusEncode` snakemake (runs `ntCard`, `ntStat` and `korusMatrix.py`):
 ```bash
@@ -248,7 +249,7 @@ korusMatrix.py: the following arguments are required: --bf_dir, --kmer_file, --o
   --k 55
 ```
 
-### 2. DECODE stage
+### 2. DECODE Stage
 
 ```bash
 usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C]
@@ -277,7 +278,7 @@ PCA parameters. --global_pcs specifies the number of principal components used d
 
 ---
 
-## Inputs <a name="inputs"></a>
+## Input Files <a name="inputs"></a>
 
 ### Bloom filters
 Per-sample k-mer Bloom filters compatible with ntEdit/ntStat.
@@ -287,7 +288,7 @@ Example:
 SAMPLE_k55.bf
 ```
 
-### SNV k-mer file
+### SNV k-mer File
 ```
 chr  pos  allele  kmer
 ```
@@ -297,14 +298,14 @@ e.g.,
 10	11501	ALT	CCAGCGGTGTCCGGGAGCCTAGCGGCGAGTGTGCAGCGGCCAGTGCACCTGCTCT
 ```
 
-### Reference hard labels (optional, --labels)
+### Reference Hard Labels (Optional, --labels)
 ```
 sample   ancestry
 ERR1     EUR
 ERR2     AFR
 ```
 
-### Reference soft labels (optional, --fractions)
+### Reference Soft Labels (Optional, --fractions)
 ```
 sample	 EAS	  SAS	   AMR	   AFR	   EUR
 ERR1	 0.1961	0.0105	0.7233	0.0595	0.0105
@@ -312,17 +313,17 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 ```
 ---
 
-## Outputs <a name="outputs"></a>
+## Output Files <a name="outputs"></a>
 
-### Global outputs
+### Global Outputs
 - .lai_summary.tsv
 - .ancestry_fractions.tsv  
 - .posterior_probabilities.tsv  
 
-### Local ancestry outputs
+### Local Ancestry Outputs
 - .SAMPLE.lai.tsv   
 
-### Unsupervised mode (additional output)
+### Unsupervised Mode (additional output)
 - .reference_clusters.tsv — reference sample IDs and their inferred K-means cluster assignments
 
 ### Visualizations
@@ -334,7 +335,7 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 
 ---
 
-## Workflow overview <a name="workflow-overview"></a>
+## Workflow Overview <a name="workflow-overview"></a>
 
 1. Bloom filter interrogation
 2. SNV-level signal extraction
@@ -346,7 +347,7 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 
 ---
 
-## End-to-end korus pipeline <a name="pipeline"></a>
+## End-to-End KORUS (korus) Pipeline <a name="pipeline"></a>
 
 In addition to the modular workflow (`korusMatrix.py` → `korusDecode.py`), KORUS provides a single-entry driver script:
 
@@ -368,11 +369,11 @@ usage: korus [-h] --reads READS [--report_mode {iframe,embed}] --kmer_file KMER_
 korus: the following arguments are required: --reads, --kmer_file, -k, --outprefix
 ```
 
-### What it does
+### What It Does
 
 The `korus` driver orchestrates the full analysis chain for single-sample ancestry inference.
 
-### Pipeline stages
+### Pipeline Stages
 
 #### 1. korusEncode (internal call)
 - Builds a k-mer Bloom filter–derived feature matrix from input reads
@@ -412,7 +413,7 @@ The `korus` driver orchestrates the full analysis chain for single-sample ancest
 
 ---
 
-### Output
+### Output Files
 
 For a single-sample run, the pipeline produces:
 
@@ -424,13 +425,13 @@ For a single-sample run, the pipeline produces:
 
 ---
 
-### Dependency note
+### Dependency Note
 
 The pipeline requires:
 
 - `plot_ntroot_lai.py` (from ntRoot)
 
-Available via:
+Available from:
 - https://github.com/BirolLab/ntroot
 - Conda:
   ```bash
@@ -439,11 +440,11 @@ Available via:
 
 ---
 
-## Interactive visualizations <a name="viz"></a>
+## Interactive Visualizations <a name="viz"></a>
 
 As part of `korusDecode.py`, KORUS generates interactive PCA visualizations that position the query sample in relation to reference populations in ancestry space. Below visualization examples show sample ERR3988858 from Puerto Rico.
 
-### PCA visualizations
+### PCA Visualizations
 
 These HTML files allow exploration of population structure under different inference modes:
 
@@ -458,7 +459,7 @@ These HTML files allow exploration of population structure under different infer
   [Interactive PCA (unsupervised K=7)](https://www.birollab.ca/viz/korus7EunsupC7.pca3d.html)
 ---
 
-### Local ancestry (LAI) visualization
+### Local Ancestry (LAI) Visualization
 
 The end-to-end `korus` pipeline also produces interactive chromosomal local ancestry inference (LAI) visualizations.
 
@@ -472,7 +473,7 @@ https://github.com/BirolLab/ntRoot/blob/main/README.md#interactive-local-ancestr
 
 ---
 
-### Combined HTML report
+### Combined HTML Report
 
 KORUS generates a standalone report that integrates PCA and LAI views into a unified interface.
 
@@ -486,7 +487,6 @@ KORUS generates a standalone report that integrates PCA and LAI views into a uni
 - PCA views are produced directly by `korusDecode.py`
 - LAI and report visualizations are generated when running the full `korus` pipeline
 - The report provides synchronized navigation between genome view and population context
-
 
 
 ---
