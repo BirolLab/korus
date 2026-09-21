@@ -37,7 +37,7 @@ KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals int
 
 ## Synopsis <a name="synopsis"></a>
 
-KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions.
+KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions
 
 
 ### Key Methodological Features <a name="features"></a>
@@ -58,9 +58,11 @@ Developed by René L Warren
 
 ## Overview <a name="overview"></a>
 
-KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters.
+KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters
 
-Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome. The feature space is treated as an orthogonalized ancestry embedding in PCA-reduced coordinates, enabling covariance-aware distance classification. In other words, the feature space is treated as a decorrelated representation in PCA space prior to Mahalanobis distance estimation.
+Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome
+
+The feature space is treated as an orthogonalized ancestry embedding in PCA-reduced coordinates, enabling covariance-aware distance classification. In other words, the feature space is treated as a decorrelated representation in PCA space prior to Mahalanobis distance estimation
 
 The framework consists of:
 
@@ -94,15 +96,15 @@ Performs probabilistic inference of ancestry from the feature matrix.
 
 #### Hard Supervision (--labels)
 
-Each reference sample is assigned a single discrete ancestry class.
+Each reference sample is assigned a single discrete ancestry class
 
-KORUS learns ancestry cluster structure from categorical population labels and performs window-level classification by minimizing Mahalanobis distance to class-specific distributions in PCA space.
+KORUS learns ancestry cluster structure from categorical population labels and performs window-level classification by minimizing Mahalanobis distance to class-specific distributions in PCA space
 
-This framework assumes each reference genome belongs predominantly to one ancestry class.
+This framework assumes each reference genome belongs predominantly to one ancestry class
 
 In practice this behaves similarly to:
-- supervised metric learning
-- centroid/covariance-based discriminant assignment
+- Supervised metric learning
+- Centroid/covariance-based discriminant assignment
 - Gaussian distance classification in reduced-dimensional space
 
 with optional HMM smoothing across genomic windows.
@@ -110,33 +112,48 @@ with optional HMM smoothing across genomic windows.
 
 #### Soft Supervision (--fractions)
 
-Each reference sample contributes fractional ancestry memberships rather than a single categorical label.
+Each reference sample contributes fractional ancestry memberships rather than a single categorical label
 
-Instead of learning discrete ancestry clusters from hard assignments, KORUS estimates ancestry distributions using weighted contributions from admixed reference genomes.
+Instead of learning discrete ancestry clusters from hard assignments, KORUS estimates ancestry distributions using weighted contributions from admixed reference genomes
 
-Mahalanobis distances are therefore computed relative to ancestry-specific distributions informed by continuous ancestry weights.
+Mahalanobis distances are therefore computed relative to ancestry-specific distributions informed by continuous ancestry weights
 
 This allows:
-- admixed references
-- continuous ancestry structure
-- smoother ancestry manifolds
-- reduced dependence on discrete continental boundaries
+- Admixed references
+- Continuous ancestry structure
+- Smoother ancestry manifolds
+- Reduced dependence on discrete continental boundaries
 
 Conceptually, this behaves like:
-- weighted Gaussian supervision
-- probabilistic prototype learning
-- soft-label metric embedding
+- Weighted Gaussian supervision
+- Probabilistic prototype learning
+- Soft-label metric embedding
+Rather than categorical classification
 
-rather than categorical classification.
+#### Unsupervised (--mode unsupervised)
+
+No ancestry labels or ancestry fractions are required
+
+KORUS first standardizes the reference feature matrix, performs PCA, and partitions the reference samples into `k` clusters using K-means (see below, --c in korusDecode/korus). The resulting cluster assignments are then used as pseudo-labels for the same Gaussian/Mahalanobis classification framework used in hard-supervised mode
+
+This allows ancestry structure to be inferred directly from the reference panel without predefined ancestry labels
+
+Conceptually, this behaves like:
+- Unsupervised population structure discovery
+- K-means clustering in PCA space
+- Pseudo-label Gaussian classification
+
+The inferred clusters represent data-driven ancestry groups rather than predefined ancestry categories
+
 
 #### Hard vs Soft Supervision Behavior
 
-When using --labels, KORUS can model any discrete ancestry category represented in the reference labels.
+When using --labels, KORUS can model any discrete ancestry category represented in the reference labels
 
-When using --fractions, the ancestry space is constrained to the ancestry columns provided in the fraction matrix. Ancestries absent from the fraction table are not explicitly modeled during probabilistic decoding.
+When using --fractions, the ancestry space is constrained to the ancestry columns provided in the fraction matrix. Ancestries absent from the fraction table are not explicitly modeled during probabilistic decoding
 
 
-**Core steps:**
+**Core Steps:**
 - Standardization of the feature matrix
 - Dimensionality reduction (PCA)
 - Distance-based classification (Mahalanobis)
