@@ -128,6 +128,7 @@ Conceptually, this behaves like:
 - Weighted Gaussian supervision
 - Probabilistic prototype learning
 - Soft-label metric embedding
+
 Rather than categorical classification
 
 #### Unsupervised (--mode unsupervised)
