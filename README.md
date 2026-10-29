@@ -1,4 +1,6 @@
+[![Release](https://img.shields.io/github/release/birollab/korus.svg)](https://github.com/birollab/korus/releases)
 [![ntRoot dependency](https://img.shields.io/badge/depends-ntRoot%20framework-brightgreen)](https://github.com/birollab/ntRoot)
+[![Zenodo](https://img.shields.io/badge/korus-zenodo-red)](https://doi.org/10.5281/zenodo.23738447)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)]()
 [![License](https://img.shields.io/badge/license-GPLv3-lightgrey)]()
 
@@ -8,9 +10,7 @@
 
 Probabilistic ancestry inference beyond variant calls
 
-KORUS (K-mer Orthogonal Representation for Unified Stratification of ancestry) is a probabilistic framework for genomic ancestry inference based on an orthogonalized, PCA-reduced feature representation.
-
-KORUS derives window-level ancestry estimates by embedding k-mer-based ALT/REF signals in a feature matrix, computing ancestry scores using Mahalanobis distances in PCA-reduced feature space, and applying softmax normalization. Hidden Markov model (HMM) smoothing enforces genomic continuity before ancestry fractions are computed.
+KORUS (K-mer Orthogonal Representation for Unified Stratification of ancestry) is a probabilistic framework for genomic ancestry inference using k-mer signals encoded in Bloom filters. It supports local and genome-wide ancestry inference without requiring explicit variant calling or sequence alignment of query genomes.
 
 Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inference
 
@@ -39,14 +39,13 @@ Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inferen
 
 ## Synopsis <a name="synopsis"></a>
 
-KORUS converts k-mer presence in Bloom filters into per-window scalar signals (ALT–REF normalized), aggregates these into a sample-by-window feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and optionally applies an HMM (Viterbi) to smooth window-wise ancestry paths before aggregating them into genome-wide fractions
-
+KORUS converts k-mer presence in Bloom filters into normalized, per-window ALT–REF scalar signals and aggregates these into a sample-by-window feature matrix. Ancestry scores are computed using Mahalanobis distances in PCA-reduced feature space and transformed via softmax normalization to obtain probabilistic ancestry estimates. An optional hidden Markov model (HMM), decoded using the Viterbi algorithm, smooths window-wise ancestry paths before genome-wide ancestry fractions are calculated.
 
 ### Key Methodological Features <a name="features"></a>
 
 - k-mer/Bloom-filter ancestry representation
 - Reference-free signal extraction
-- Local ancestry inference without alignment
+- Alignment-free local ancestry inference
 - Soft-supervised ancestry manifold modeling
 
 ---
