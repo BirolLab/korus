@@ -6,11 +6,13 @@
 
 # KORUS
 
-K-mer Orthogonal Representation for Unified Stratification (of ancestry) — an orthogonalized ancestry feature representation in PCA-reduced space
+Probabilistic ancestry inference beyond variant calls
 
-KORUS derives window-level ancestry by embedding k-mer-based ALT/REF signals into a feature matrix, assigning ancestry likelihoods via Mahalanobis distance in PCA-reduced feature space followed by softmax normalization, and enforcing genomic continuity using HMM smoothing before computing ancestry fractions
+KORUS (K-mer Orthogonal Representation for Unified Stratification of ancestry) is a probabilistic framework for genomic ancestry inference based on an orthogonalized, PCA-reduced feature representation.
 
-## Feature Matrix → Probabilistic Decode Framework for Genomic Ancestry Inference
+KORUS derives window-level ancestry estimates by embedding k-mer-based ALT/REF signals in a feature matrix, computing ancestry scores using Mahalanobis distances in PCA-reduced feature space, and applying softmax normalization. Hidden Markov model (HMM) smoothing enforces genomic continuity before ancestry fractions are computed.
+
+Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inference
 
 ---
 
