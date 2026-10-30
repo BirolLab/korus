@@ -218,20 +218,25 @@ options:
   --kmer_file KMER_FILE
                         SNV k-mer definition file
   -k {45,55}            Model k-mer size
-  --window WINDOW
-  -t T
+  --window WINDOW       Window size [default 500000bp]
+  -t T                  Number of threads [default 48]
   --mode {hard,soft,unsupervised}
+                        KORUS mode (hard, soft or unsupervised)
   --c C                 KMeans n_clusters (unsupervised mode)
   --global_pcs GLOBAL_PCS
                         Number of PCs used for unsupervised K-means clustering
   --local_pcs LOCAL_PCS
                         Maximum number of PCs used for local Mahalanobis ancestry inference
   --window_radius WINDOW_RADIUS
+                        Window radius [default 3]
   --stay_prob STAY_PROB
-  --no_hmm
+                        HMM self-transition probability [default 0.98]
+  --no_hmm              Disable HMM smoothing
   --outprefix OUTPREFIX
+                        Prefix for output files
   --report_title REPORT_TITLE
-  -n, --dry-run
+                        Title for output report [KORUS Ancestry Predictions]
+  -n, --dry-run         Print commands without executing them
   -V, --version         show program's version number and exit
   --ref REF             Override bundled reference matrix
   --labels LABELS       Override bundled hard-supervised labels

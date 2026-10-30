@@ -72,13 +72,15 @@ def set_up_parser():
     parser.add_argument(
         "--window",
         default=500000,
-        type=int
+        type=int,
+        help="Window size [default 500000bp]"
     )
 
     parser.add_argument(
         "-t",
         default=48,
-        type=int
+        type=int,
+        help="Number of threads [default 48]"
     )
 
     # --------------------------------------------------
@@ -88,7 +90,8 @@ def set_up_parser():
     parser.add_argument(
         "--mode",
         choices=["hard", "soft", "unsupervised"],
-        default="hard"
+        default="hard",
+        help="KORUS mode (hard, soft or unsupervised)"
     )
 
     parser.add_argument(
@@ -115,34 +118,40 @@ def set_up_parser():
     parser.add_argument(
         "--window_radius",
         type=int,
-        default=None
+        default=3,
+        help="Window radius [default 3]"
     )
 
     parser.add_argument(
         "--stay_prob",
         type=float,
-        default=None
+        default=0.98,
+        help="HMM self-transition probability [default 0.98]"
     )
 
     parser.add_argument(
         "--no_hmm",
-        action="store_true"
+        action="store_true",
+        help="Disable HMM smoothing"
     )
 
     parser.add_argument(
         "--outprefix",
-        required=True
+        required=True,
+        help="Prefix for output files"
     )
 
     parser.add_argument(
         "--report_title",
-        default="KORUS Ancestry Predictions"
+        default="KORUS Ancestry Predictions",
+        help="Title for output report [KORUS Ancestry Predictions]"
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
-        action="store_true"
+        action="store_true",
+        help="Print commands without executing them"
     )
 
     parser.add_argument(
