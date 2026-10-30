@@ -313,8 +313,10 @@ This matrix can be input to `korus` using `--ref`. For usage with multi-sample K
 While the `korus` script can be used to run all steps using a single sample, these steps can be followed to generate a single sample matrix for analysis using the KORUS pipeline.
 
 1. Follow the same steps as for generating a custom reference matrix (see above for details):
-  a. Run `korusEncode` for each input sample data, using the same parameters
-  b. Combine all sample matrices to a combined multi-sample matrix
+
+    a. Run `korusEncode` for each input sample data, using the same parameters
+  
+    b. Combine all sample matrices to a combined multi-sample matrix
 
 2. Run `korusDecode.py` to generate ancestry fraction predictions for each input sample
 ```bash
@@ -326,7 +328,7 @@ usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fracti
 
 For hard supervision, use `--labels`, and for soft supervision use `--fractions`. Omitting both of these parameters will run KORUS in unsupervised mode.
 
-Use `--ref` to input the reference matrix (available in `model` or custom).
+Use `--ref` to input the reference matrix (available in directory `model` or use custom-built matrix).
 
 Example command:
 ```
@@ -336,14 +338,14 @@ korusDecode.py --ref model/korusModelMatrixk55.tsv.gz --sample sampleMatrix.tsv 
 ```
 
 PCA parameters:
- --global_pcs specifies the number of principal components used during unsupervised K-means clustering of the reference panel. --local_pcs specifies the maximum number of principal components retained for the window-level Mahalanobis ancestry inference performed during local ancestry assignment. These parameters control distinct PCA operations and may be adjusted independently.
+ `--global_pcs` specifies the number of principal components used during unsupervised K-means clustering of the reference panel. `--local_pcs` specifies the maximum number of principal components retained for the window-level Mahalanobis ancestry inference performed during local ancestry assignment. These parameters control distinct PCA operations and may be adjusted independently.
 
 
 ---
 
 ### Output Files
 
-- `.lai_summary.tsv` - ancestry fractions and probabilities for each query sample
+- `.lai_summary.tsv` — ancestry fractions and probabilities for each query sample
 - `*.lai.tsv` — local ancestry inference results per sample
 - `*.pca3d.html` — population context (PCA embedding)
 - `.reference_clusters.tsv` — reference sample IDs and their inferred K-means cluster assignments (unsupervised mode only)
