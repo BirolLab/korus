@@ -32,9 +32,12 @@ def open_kmer_file(path):
 # ----------------------
 parser = argparse.ArgumentParser(description="Build variant window-sample matrix from Bloom filters")
 parser.add_argument("--bf_dir", required=True, help="Directory containing Bloom filter files")
+parser.add_argument(
+    "--sample", help="Only use this sample's <sample>_k<k>.bf file [default: all samples]"
+)
 parser.add_argument("--kmer_file", required=True, help="File listing kmers")
 parser.add_argument("--output_matrix", required=True, help="Output TSV matrix file")
-parser.add_argument("--window_size", type=int, default=500_000, help="Window size for aggregation")
+parser.add_argument("--window_size", type=int, default=500_000, help="Window size for aggregation [default 500000]")
 parser.add_argument("--k", type=int, default=55, help="Bloom filter(s) k-mer length")
 parser.add_argument("-V", "--version", action="version", version=KORUSMATRIX_VERSION)
 
@@ -58,12 +61,18 @@ if not os.path.isdir(BF_DIR):
 bf_files = sorted([
     f for f in os.listdir(BF_DIR)
     if re.search(rf"_k{KMER}\.bf$", f)
+    and (args.sample is None or f == f"{args.sample}_k{KMER}.bf")
 ])
 
 if not bf_files:
+    if args.sample is not None:
+        raise FileNotFoundError(
+            f"Bloom filter file does not exist: "
+            f"{os.path.join(BF_DIR, f'{args.sample}_k{KMER}.bf')}"
+        )
     raise ValueError(f"No .bf files found for k={KMER} in {BF_DIR}")
 
-samples = [re.sub(rf"_k{KMER}\.bf$", "", f) for f in bf_files]
+samples = [f.removesuffix(f"_k{KMER}.bf") for f in bf_files]
 
 print(f"Found {len(samples)} samples (k={KMER})", flush=True)
 

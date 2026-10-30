@@ -119,6 +119,7 @@ rule korus_matrix:
         {params.benchmark} \
         korusMatrix.py \
             --bf_dir . \
+            --sample {reads_prefix:q} \
             --kmer_file {input.kmer_file} \
             --output_matrix {output.matrix} \
             --window_size {window_size} \

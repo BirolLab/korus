@@ -1820,14 +1820,15 @@ def main():
                         help="Reference ancestry fractions TSV")
 
     parser.add_argument("--c", type=int, default=5,
-                        help="KMeans n_clusters")
+                        help="KMeans n_clusters [default 5]")
 
     parser.add_argument("--outprefix", required=True,
                         help="Output prefix")
 
     parser.add_argument("--window_radius",
                         type=int,
-                        default=3)
+                        default=3,
+                        help="Window radius [default 3]")
 
     parser.add_argument("--require_full_window",
                         action="store_true")
@@ -1835,7 +1836,7 @@ def main():
     parser.add_argument("--stay_prob",
                         type=float,
                         default=0.98,
-                        help="HMM self-transition probability")
+                        help="HMM self-transition probability [default 0.98]")
 
     parser.add_argument("--no_hmm",
                         action="store_true",
@@ -1844,12 +1845,12 @@ def main():
     parser.add_argument("--global_pcs",
                         type=int,
                         default=10,
-                        help="Number of PCs used for unsupervised K-means clustering")
+                        help="Number of PCs used for unsupervised K-means clustering [default 10]")
 
     parser.add_argument("--local_pcs",
                         type=int,
                         default=10,
-                        help="Maximum number of PCs used for local Mahalanobis ancestry inference")
+                        help="Maximum number of PCs used for local Mahalanobis ancestry inference [default 10]")
 
     parser.add_argument("-V", "--version",
                         action="version",

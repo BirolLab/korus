@@ -17,8 +17,8 @@ def parse_arguments():
         ),
         epilog=(
             "Examples:\n"
-            "  python3 aggregateMatrices.py sample1.tsv sample2.tsv -o merged.tsv\n"
-            "  python3 aggregateMatrices.py --matrix-list matrices.txt -o merged.tsv\n\n"
+            "  python3 korusAggregateMatrices.py sample1.tsv sample2.tsv -o merged.tsv\n"
+            "  python3 korusAggregateMatrices.py --matrix-list matrices.txt -o merged.tsv\n\n"
             "Each matrix must have a header: chr window_start:<size> <sample>.\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
