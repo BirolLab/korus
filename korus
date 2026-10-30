@@ -70,7 +70,7 @@ def set_up_parser():
     )
 
     parser.add_argument(
-        "--tile",
+        "--window",
         default=500000,
         type=int
     )
@@ -760,7 +760,7 @@ def main():
     matrix_file = (
         f"{reads_prefix}"
         f"_k{args.k}"
-        f"_t{args.tile}"
+        f"_t{args.window}"
         f"_korus-matrix.tsv"
     )
 
@@ -776,7 +776,7 @@ def main():
             f"--reads {args.reads} "
             f"--kmer_file {args.kmer_file} "
             f"-k {args.k} "
-            f"--tile {args.tile} "
+            f"--window_size {args.window} "
             f"-t {args.t}"
         )
 

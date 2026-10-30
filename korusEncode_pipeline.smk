@@ -21,7 +21,7 @@ reads_prefix_full = config["reads"]
 reads_prefix = os.path.basename(reads_prefix_full)
 
 k = config["kmer"]
-tile_size = config["tile_size"]
+window_size = config["window_size"]
 n_threads = config["threads"]
 
 kmer_file = config["kmer_file"]
@@ -47,7 +47,7 @@ reads_files = sorted(
 
 rule all:
     input:
-        f"{reads_prefix}_k{k}_t{tile_size}_korus-matrix.tsv"
+        f"{reads_prefix}_k{k}_t{window_size}_korus-matrix.tsv"
 
 # ---------------------------------------------------------
 # ntCard
@@ -109,7 +109,7 @@ rule korus_matrix:
         kmer_file = kmer_file
 
     output:
-        matrix = f"{reads_prefix}_k{k}_t{tile_size}_korus-matrix.tsv"
+        matrix = f"{reads_prefix}_k{k}_t{window_size}_korus-matrix.tsv"
 
     params:
         benchmark = f"{time_command} korusMatrix_k{k}.time"
@@ -121,6 +121,6 @@ rule korus_matrix:
             --bf_dir . \
             --kmer_file {input.kmer_file} \
             --output_matrix {output.matrix} \
-            --window_size {tile_size} \
+            --window_size {window_size} \
             --k {k}
         """

@@ -185,7 +185,7 @@ KORUS provides a single-entry driver script to run all steps in the pipeline:
 
 ```
 usage: korus [-h] --reads READS [--report_mode {iframe,embed}] --kmer_file KMER_FILE -k {45,55}
-             [--tile TILE] [-t T] [--mode {hard,soft,unsupervised}] [--c C] [--global_pcs GLOBAL_PCS]
+             [--window WINDOW] [-t T] [--mode {hard,soft,unsupervised}] [--c C] [--global_pcs GLOBAL_PCS]
              [--local_pcs LOCAL_PCS] [--window_radius WINDOW_RADIUS] [--stay_prob STAY_PROB] [--no_hmm]
              --outprefix OUTPREFIX [--report_title REPORT_TITLE] [-n] [-V] [--ref REF] [--labels LABELS]
              [--fractions FRACTIONS]
@@ -227,7 +227,7 @@ For a single-sample run, the pipeline produces:
 
 1. Run `korusEncode` for all input reference samples - runs `ntCard`, `ntStat` and `korusMatrix.py`
 ```bash
-usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--tile TILE] [-t T] [-n] [-f] [-V]
+usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--window_size WINDOW_SIZE] [-t T] [-n] [-f] [-V]
 korusEncode: the following arguments are required: --reads, --kmer_file, -k 
 ```
 
@@ -283,6 +283,8 @@ usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fracti
 ```
 
 For hard supervision, use `--labels`, and for soft supervision use `--fractions`. Omitting both of these parameters will run KORUS in unsupervised mode.
+
+Use `--ref` to input the reference matrix (available in `model` or custom).
 
 Example command:
 ```

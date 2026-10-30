@@ -45,10 +45,10 @@ def set_up_parser():
     )
 
     parser.add_argument(
-        "--tile",
+        "--window_size",
         default=500000,
         type=int,
-        help="Window/tile size for matrix aggregation [default=500000]"
+        help="Window size for matrix aggregation [default=500000]"
     )
 
     parser.add_argument(
@@ -102,7 +102,7 @@ def main():
         f"\t--reads {args.reads}",
         f"\t--kmer_file {args.kmer_file}",
         f"\t-k {args.k}",
-        f"\t--tile {args.tile}",
+        f"\t--window_size {args.window_size}",
         f"\t-t {args.t}"
     ]
 
@@ -117,7 +117,7 @@ def main():
         f"reads={args.reads} "
         f"kmer_file={args.kmer_file} "
         f"kmer={args.k} "
-        f"tile_size={args.tile} "
+        f"window_size={args.window_size} "
         f"threads={args.t}"
     )
 
