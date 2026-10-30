@@ -15,7 +15,7 @@ import subprocess
 from packaging import version
 import snakemake
 
-KORUSENCODE_VERSION = "v0.1.0"
+KORUSENCODE_VERSION = "v1.1.0"
 
 
 def set_up_parser():

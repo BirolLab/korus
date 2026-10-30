@@ -29,7 +29,7 @@ import shutil
 import re
 
 
-KORUS_VERSION = "v0.2.8"
+KORUS_VERSION = "v1.1.0"
 
 #-----------------------------
 def set_up_parser():

@@ -22,7 +22,7 @@ import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v0.2.5"
+KORUSDECODE_VERSION = "v1.1.0"
 
 # Define cluster colors
 UNSUPERVISED_PALETTE = [

@@ -10,14 +10,7 @@ import gzip
 import io
 import math
 
-KORUSMATRIX_VERSION = "v0.1.2"
-
-#v0.1.2:
-#Preserves evidence multiplicity : supports multi-ALT sites
-#Compresses redundancy with log-converted signal (minimize effect of off-target and BF FPR)
-#Stabilizes PCA geometry
-#
-#bounded, variance-stabilized, contrast statistic
+KORUSMATRIX_VERSION = "v1.0.0"
 
 # ----------------------
 # OPEN KMER FILE
