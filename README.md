@@ -102,7 +102,7 @@ Performs probabilistic inference of ancestry from the feature matrix.
 
 ---
 
-### KORUS Modes
+## KORUS Modes
 
 #### Hard supervised (`--mode hard` in `korus`)
 - Uses discrete reference labels (`--labels`)
@@ -189,6 +189,7 @@ ERR2     AFR
 ```
 
 ### Reference Soft Labels (Soft supervised mode only, `--fractions`)
+Can be generated using [ntRoot](https://github.com/BirolLab/ntRoot)
 ```
 sample	 EAS	  SAS	   AMR	   AFR	   EUR
 ERR1	 0.1961	0.0105	0.7233	0.0595	0.0105
@@ -320,10 +321,32 @@ While the `korus` script can be used to run all steps using a single sample, the
 
 2. Run `korusDecode.py` to generate ancestry fraction predictions for each input sample
 ```bash
-usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C]
-                      --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS] [--require_full_window]
-                      [--stay_prob STAY_PROB] [--no_hmm] [--global_pcs GLOBAL_PCS]
-                      [--local_pcs LOCAL_PCS] [-V]
+usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
+                      [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [--global_pcs GLOBAL_PCS] [--local_pcs LOCAL_PCS] [-V]
+
+Ancestry inference with PCA + Mahalanobis window assignment
+
+options:
+  -h, --help            show this help message and exit
+  --ref REF             Reference matrix TSV
+  --sample SAMPLE       Sample matrix TSV
+  --labels LABELS       Discrete ancestry labels TSV
+  --fractions FRACTIONS
+                        Reference ancestry fractions TSV
+  --c C                 KMeans n_clusters [default 5]
+  --outprefix OUTPREFIX
+                        Output prefix
+  --window_radius WINDOW_RADIUS
+                        Window radius [default 3]
+  --require_full_window
+  --stay_prob STAY_PROB
+                        HMM self-transition probability [default 0.98]
+  --no_hmm              Disable HMM smoothing
+  --global_pcs GLOBAL_PCS
+                        Number of PCs used for unsupervised K-means clustering [default 10]
+  --local_pcs LOCAL_PCS
+                        Maximum number of PCs used for local Mahalanobis ancestry inference [default 10]
+  -V, --version         show program's version number and exit
 ```
 
 For hard supervision, use `--labels`, and for soft supervision use `--fractions`. Omitting both of these parameters will run KORUS in unsupervised mode.
@@ -365,13 +388,13 @@ As part of `korusDecode.py`, KORUS generates interactive PCA visualizations that
 
 These HTML files (`*pca3d.html`) allow exploration of population structure under different inference modes:
 
-- **Hard mode**
+- **Hard mode**:
   [Interactive PCA (hard)](https://www.birollab.ca/viz/korus7Ehard.pca3d.html)
 
-- **Soft mode**
+- **Soft mode**:
   [Interactive PCA (soft / fractions)](https://www.birollab.ca/viz/korus7Esoft.fractions.pca3d.html)
 
-- **Unsupervised mode**
+- **Unsupervised mode**:
   [Interactive PCA (unsupervised K=5)](https://www.birollab.ca/viz/korus7Eunsup.pca3d.html)
   [Interactive PCA (unsupervised K=7)](https://www.birollab.ca/viz/korus7EunsupC7.pca3d.html)
 ---
@@ -385,7 +408,7 @@ These allow users to explore ancestry assignments along chromosomes or across th
 Reference implementation and details:
 https://github.com/BirolLab/ntRoot/blob/main/README.md#interactive-local-ancestry-lai-visualization-
 
-- **LAI visualization (hard mode example)**
+- **LAI visualization (hard mode example)**:
   [Interactive LAI (hard)](https://www.birollab.ca/viz/ERR3988858_korus7Ehard.lai.html)
 
 ---
