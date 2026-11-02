@@ -35,6 +35,7 @@ jobs:
 
   - script: |
       source activate korus_ci
+      export PATH=$(PATH):$PWD
       korusEncode --help
       korusDecode.py --help
       korusAggregateMatrices.py --help
@@ -73,6 +74,7 @@ jobs:
 
   - script: |
       source activate korus_ci
+      export PATH=$(PATH):$PWD
       korusEncode --help
       korusDecode.py --help
       korusAggregateMatrices.py --help
