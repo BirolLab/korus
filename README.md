@@ -387,6 +387,9 @@ cd demo
 ./run_korus_demo.sh
 ```
 
+Note that this demo uses only chromosome 21 sequencing reads from the two samples, which may bias the estimated ancestry fractions. 
+We recommend using whole-genome sequencing data for KORUS analyses.
+
 ---
 
 
