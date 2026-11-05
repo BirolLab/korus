@@ -2,10 +2,10 @@
 """Merge single-sample KORUS matrices."""
 
 import argparse
-import math
 from pathlib import Path
 import sys
 
+KORUS_AGGREGATEMATRICES_VERSION = "v1.1.1"
 
 def parse_arguments():
     """Parse matrix paths and output options."""
@@ -32,7 +32,11 @@ def parse_arguments():
         "-o", "--output", default="-", metavar="FILE",
         help="Output TSV path (default: standard output; '-' also means stdout)",
     )
-        
+    parser.add_argument(
+        "-v", "--version", action="version",
+        version=KORUS_AGGREGATEMATRICES_VERSION,
+    )
+
     return parser, parser.parse_args()
 
 
@@ -121,12 +125,12 @@ def write_matrix(handle, window_size, samples, rows):
 def main():
     """Validate all inputs before opening the output and report useful errors."""
     parser, args = parse_arguments()
-    
+
     if not args.matrices and not args.matrix_list:
         print("Please either supply matrix files names as positional arguments or using `--matrix-list`")
         parser.print_help()
         parser.exit()
-    
+
     paths = collect_paths(args)
     window_size, samples, rows = merge_matrices(paths)
     if args.output == "-":

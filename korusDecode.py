@@ -22,7 +22,7 @@ import matplotlib.colors as mcolors
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-KORUSDECODE_VERSION = "v1.1.0"
+KORUSDECODE_VERSION = "v1.1.1"
 
 # Define cluster colors
 UNSUPERVISED_PALETTE = [
@@ -1594,7 +1594,7 @@ def window_cluster_assignment(
 
             scores = np.array(scores)
             if scores.size == 0:
-               continue
+                continue
 
             # Convert scores to probabilities (softmax)
             exp_scores = np.exp(scores - np.max(scores))
@@ -1699,7 +1699,7 @@ def write_lai_outputs(preds_all, probs_all, classes, coords, sample_names, outpr
 
                 # Combine cluster ID and class label
                 cluster_label = class_to_cluster[pred]
-                pred_label = pred 
+                pred_label = pred
 
                 # Build output row
                 row = [chr_, str(start), str(end), pred_label]
