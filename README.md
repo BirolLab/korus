@@ -30,9 +30,10 @@ Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inferen
 10. [Running KORUS using one query sample with the provided reference matrix](#running-korus-using-one-query-sample-with-the-provided-reference-matrix)
 11. [Advanced usage: Generating a custom reference matrix with KORUS](#advanced-usage-generating-a-custom-reference-matrix-with-korus)
 12. [Advanced usage: Running KORUS using multiple samples](#advanced-usage-running-korus-using-multiple-samples)
-13. [Interactive Visualizations](#viz)
-14. [Citing](#citing)  
-15. [License](#license)  
+13. [Demo](demo/)
+14. [Interactive Visualizations](#viz)
+15. [Citing](#citing)  
+16. [License](#license)  
 
 ---
 
@@ -376,6 +377,15 @@ PCA parameters:
 - `korus` pipeline (single query sample) only:
   - `*.lai.html` — interactive genome view
   - `*.report.html` — combined PCA + LAI interactive visualization report (see below examples)
+
+---
+## Demo
+
+To test your KORUS installation or see examples of running KORUS, see our [demo](https://github.com/BirolLab/korus/demo):
+```
+cd demo
+./run_korus_demo.sh
+```
 
 ---
 
