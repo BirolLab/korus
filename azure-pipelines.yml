@@ -49,7 +49,7 @@ jobs:
       ./run_korus_demo.sh
     displayName: Run KORUS demo
 
-  - publish: demo/multi-sample.korus_unsupervised.pca3d.html
+  - publish: demo/multi-sample.korus.fractions.pca3d.html
     artifact: multi-sample_soft
 
 - job:
