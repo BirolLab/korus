@@ -42,15 +42,15 @@ jobs:
       korusMatrix.py --help
     displayName: Test KORUS help pages
 
-- script: |
-    source activate korus_ci
-    export PATH=$PATH:$PWD
-    cd demo
-    ./run_korus_demo.sh
-  displayName: Run KORUS demo
+  - script: |
+      source activate korus_ci
+      export PATH=$PATH:$PWD
+      cd demo
+      ./run_korus_demo.sh
+    displayName: Run KORUS demo
 
-- publish: demo/multi-sample.korus_unsupervised.pca3d.html
-  artifact: multi-sample_soft
+  - publish: demo/multi-sample.korus_unsupervised.pca3d.html
+    artifact: multi-sample_soft
 
 - job:
   displayName: macOS-latest
