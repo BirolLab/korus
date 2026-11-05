@@ -10,7 +10,7 @@ import gzip
 import io
 import math
 
-KORUSMATRIX_VERSION = "v1.0.0"
+KORUSMATRIX_VERSION = "v1.1.1"
 
 # ----------------------
 # OPEN KMER FILE
