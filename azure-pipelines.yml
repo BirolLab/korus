@@ -30,7 +30,7 @@ jobs:
 
   - script: |
       source activate korus_ci
-      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib ntroot snakemake ntcard ntstat
+      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
     displayName: Install dependencies
 
   - script: |
@@ -78,7 +78,7 @@ jobs:
 
   - script: |
       source activate korus_ci
-      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib ntroot snakemake ntcard ntstat
+      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
     displayName: Install dependencies
 
   - script: |
