@@ -1,0 +1,98 @@
+# KORUS CI
+
+jobs:
+- job:
+  displayName: ubuntu-latest
+  pool:
+    vmImage: 'ubuntu-latest'
+
+  steps:
+  - checkout: self
+    persistCredentials: true
+    submodules: true
+
+  - script: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - script: |
+      mkdir -p ~/miniforge3
+      curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh  -o ~/miniforge3/miniforge.sh
+      bash ~/miniforge3/miniforge.sh -b -u -p ~/miniforge3
+      rm -rf  ~/miniforge3/miniforge.sh
+      ~/miniforge3/bin/conda init bash
+      ~/miniforge3/bin/conda init zsh
+      export CONDA=$(realpath ~/miniforge3/bin)
+      echo "##vso[task.prependpath]$CONDA"
+    displayName: Install conda
+
+  - script: conda create --yes --quiet --name korus_ci
+    displayName: Create Anaconda environment
+
+  - script: |
+      source activate korus_ci
+      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
+    displayName: Install dependencies
+
+  - script: |
+      source activate korus_ci
+      export PATH=$PATH:$PWD
+      korusEncode --help
+      korusDecode.py --help
+      korusAggregateMatrices.py --help
+      korusMatrix.py --help
+    displayName: Test KORUS help pages
+
+  - script: |
+      source activate korus_ci
+      export PATH=$PATH:$PWD
+      cd demo
+      ./run_korus_demo.sh
+    displayName: Run KORUS demo
+
+  - publish: demo/multi-sample.korus.fractions.pca3d.html
+    artifact: multi-sample_soft
+
+- job:
+  displayName: macOS-latest
+  pool:
+    vmImage: 'macOS-latest'
+
+  steps:
+  - checkout: self
+    persistCredentials: true
+    submodules: true
+
+  - script: |
+      mkdir -p ~/miniforge3
+      curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-$(uname -m).sh -o ~/miniforge3/miniforge.sh
+      bash ~/miniforge3/miniforge.sh -b -u -p ~/miniforge3
+      rm -rf  ~/miniforge3/miniforge.sh
+      ~/miniforge3/bin/conda init bash
+      ~/miniforge3/bin/conda init zsh
+      export CONDA=$(realpath ~/miniforge3/bin)
+      echo "##vso[task.prependpath]$CONDA"
+    displayName: Install conda
+
+  - script: conda create --yes --quiet --name korus_ci
+    displayName: Create Anaconda environment
+
+  - script: |
+      source activate korus_ci
+      mamba install --yes -c bioconda -c conda-forge numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
+    displayName: Install dependencies
+
+  - script: |
+      source activate korus_ci
+      export PATH=$PATH:$PWD
+      korusEncode --help
+      korusDecode.py --help
+      korusAggregateMatrices.py --help
+      korusMatrix.py --help
+    displayName: Test KORUS help pages
+  
+  - script: |
+      source activate korus_ci
+      export PATH=$PATH:$PWD
+      cd demo
+      ./run_korus_demo.sh
+    displayName: Run KORUS demo
