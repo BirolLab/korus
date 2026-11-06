@@ -213,7 +213,11 @@ while (<STDIN>) {
 
     my @alts = split /,/, $alt;
 
+
     foreach my $a (@alts) {
+
+        # Skip non-sequence alleles (e.g. *, <DEL>, <INS>, N)
+        next unless $ref =~ /^[ACGT]+$/i && $a =~ /^[ACGT]+$/i;
 
         my $is_snv = (length($ref) == 1 && length($a) == 1);
 
