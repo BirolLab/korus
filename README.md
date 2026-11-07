@@ -62,6 +62,7 @@ An optional hidden Markov model (HMM), decoded using the Viterbi algorithm, smoo
 ## Credit <a name="credit"></a>
 
 Developed by René L Warren
+
 CI, testing and Support: Lauren Coombe
 
 ---
