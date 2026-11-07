@@ -131,7 +131,7 @@ Performs probabilistic inference of ancestry from the feature matrix.
 git clone https://github.com/birollab/korus.git
 cd korus
 # Ensure the KORUS repository is on your PATH
-export PATH=$(PWD):$PATH
+export PATH="$PWD:$PATH"
 
 conda install -c conda-forge -c bioconda numpy pandas scikit-learn matplotlib plotly btllib ntroot snakemake ntcard ntstat
 ```
