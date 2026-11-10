@@ -133,7 +133,7 @@ cd korus
 # Ensure the KORUS repository is on your PATH
 export PATH="$PWD:$PATH"
 
-conda install -c conda-forge -c bioconda numpy pandas scikit-learn matplotlib plotly btllib ntroot snakemake ntcard ntstat
+conda install -c conda-forge -c bioconda numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
 ```
 
 ---
