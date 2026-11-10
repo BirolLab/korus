@@ -942,7 +942,8 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
                 "label": plot_label,
                 "type": "reference",
                 "name": ref_name,
-                "cluster": ""
+                "cluster": "",
+                "description": labels.iloc[i]["ancestry"]
             })
 
     else:
@@ -1041,7 +1042,11 @@ def plot_pca_3dint(X_ref, X_sample, labels, clusters, sample_names, outprefix, f
             name=lab,
             marker=dict(size=5, color=color_discrete_map.get(lab, "#999999"), opacity=0.6),
             text=sub["name"],
-            customdata=sub["cluster"],
+            #customdata=sub["cluster"],
+            customdata=(
+                sub["description"] if labels is not None
+                else sub["cluster"]
+            ),
             hovertemplate=
                 "<b>%{text}</b><br>"
                 "PC1: %{x:.3f}<br>"
