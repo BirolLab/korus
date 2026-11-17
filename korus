@@ -44,8 +44,12 @@ def set_up_parser():
 
     parser.add_argument(
         "--reads",
-        required=True,
         help="Input read prefix"
+    )
+    
+    parser.add_argument(
+        "--genome",
+        help="Input genome FASTA file"
     )
 
     parser.add_argument(
@@ -686,7 +690,13 @@ def normalize_plot_ids(html):
 #-----------------------------
 def main():
 
-    args = set_up_parser().parse_args()
+    parser = set_up_parser()
+    args = parser.parse_args()
+    
+    if args.reads is None and args.genome is None:
+        parser.error("Either --reads or --genome must be specified.")
+    if args.reads is not None and args.genome is not None:
+        parser.error("Only one of --reads or --genome can be specified.")
 
     base_dir = os.path.dirname(
         os.path.realpath(__file__)
@@ -762,12 +772,11 @@ def main():
     # Encode
     # --------------------------------------------------
 
-    reads_prefix = os.path.basename(
-        args.reads
-    )
+    matrix_prefix = os.path.basename(args.reads) \
+        if args.reads else os.path.basename(os.path.realpath(args.genome))
 
     matrix_file = (
-        f"{reads_prefix}"
+        f"{matrix_prefix}"
         f"_k{args.k}"
         f"_t{args.window}"
         f"_korus-matrix.tsv"
@@ -782,11 +791,15 @@ def main():
         print("[checkpoint] Matrix missing or invalid, running encode")
         encode_cmd = (
             f"korusEncode "
-            f"--reads {args.reads} "
             f"--kmer_file {args.kmer_file} "
             f"-k {args.k} "
             f"--window_size {args.window} "
             f"-t {args.t}"
+        )
+        
+        encode_cmd += (
+            f" --reads {args.reads}"
+            if args.reads else f" --genome {args.genome}"
         )
 
         run_command(encode_cmd, args.dry_run)
@@ -893,8 +906,7 @@ def main():
     # Locate LAI file
     # --------------------------------------------------
 
-    sample_name = os.path.basename(args.reads)
-    lai_tsv = f"{sample_name}_{args.outprefix}.lai.tsv"
+    lai_tsv = f"{matrix_prefix}_{args.outprefix}.lai.tsv"
 
     if not os.path.isfile(lai_tsv):
         raise RuntimeError("No LAI TSV produced.")

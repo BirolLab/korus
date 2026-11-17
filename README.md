@@ -39,7 +39,7 @@ Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inferen
 
 ## Overview <a name="overview"></a><a name="synopsis"></a>
 
-KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters.
+KORUS is a two-stage computational framework for ancestry inference from sequencing data (sequencing reads or assembled genomes) using k-mer–derived genomic features encoded in Bloom filters.
 
 Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome.
 
@@ -154,6 +154,8 @@ KORUS was developed and tested on:
 - snakemake
 - ntCard >= 1.0.1
 - ntStat
+- ntRoot >= 1.2.2
+
 
 ### Python packages
 - numpy
@@ -163,15 +165,17 @@ KORUS was developed and tested on:
 - plotly
 - packaging
 
-### Optional (needed for `korus`)
-- ntRoot >= 1.2.2
 
 ---
 ## Input Files <a name="inputs"></a>
 
-### Reads
+### Reads (If using --reads)
 
 Input reference/query reads in FASTQ format
+
+### Genome assembly (If using --genome)
+
+Input assembled genome in FASTA format (gzip-compatible)
 
 ### SNV k-mer File
 See `tools/README` for instructions for generating this file from a VCF file.
@@ -247,15 +251,20 @@ options:
   --fractions FRACTIONS
                         Override bundled soft-supervised fractions
 ```
-Example command:
+Example command when using reads:
 ```bash
 korus --reads SAMPLE_PREFIX --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
+```
+
+Example command when using an assembled genome:
+```bash
+korus --genome genome.fasta --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
 ```
 
 ---
 ## Advanced usage: Generating a custom reference matrix with KORUS
 
-1. Run `korusEncode` for all input reference samples - runs `ntCard`, `ntStat` and `korusMatrix.py`
+1. Run `korusEncode` for all input reference samples - generates a Bloom filter and creates a matrix using `korusMatrix.py`
 ```bash
 usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--window_size WINDOW_SIZE] [-t T] [-n] [-f] [-V]
 
@@ -277,10 +286,17 @@ options:
 Input reads are identified using a shared prefix.
 ```
 
-Example command:
+Example command if using reads:
 ```
 korusEncode \
   --reads SAMPLE_PREFIX (Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)) \
+  --kmer_file snv_kmers.tsv -k 55 -t 48
+```
+
+Example command if using an assembled genome:
+```
+korusEncode \
+  --genome genome.fa \
   --kmer_file snv_kmers.tsv -k 55 -t 48
 ```
 

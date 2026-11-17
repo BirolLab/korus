@@ -17,8 +17,11 @@ onsuccess:
 # CONFIG
 # ---------------------------------------------------------
 
-reads_prefix_full = config["reads"]
+reads_prefix_full = config.get("reads", "")
 reads_prefix = os.path.basename(reads_prefix_full)
+
+genome = config.get("genome", "")
+genome_base = os.path.basename(os.path.realpath(genome))
 
 k = config["kmer"]
 window_size = config["window_size"]
@@ -42,12 +45,16 @@ reads_files = sorted(
 )
 
 # ---------------------------------------------------------
-# FINAL TARGET
+# FINAL TARGETS
 # ---------------------------------------------------------
 
 rule all:
     input:
         f"{reads_prefix}_k{k}_t{window_size}_korus-matrix.tsv"
+
+rule genome:
+    input:
+        f"{genome_base}_k{k}_t{window_size}_korus-matrix.tsv"
 
 # ---------------------------------------------------------
 # ntCard
@@ -99,6 +106,41 @@ rule ntstat_bloom:
         {input.reads_files} 
         """
 
+
+# ---------------------------------------------------------
+# Make Bloom filter from genome assembly
+# ---------------------------------------------------------
+rule genome_ntcard:
+    input: 
+        genome = genome
+    output:
+        hist=f"{genome_base}.k{k}.hist",
+        f_stats=f"{genome_base}.k{k}.tsv"
+    params:
+        benchmark = f"{time_command} ntcard_{genome_base}_k{k}.time",
+        options = f"-t {n_threads} -k {k}"
+    shell:
+        "{params.benchmark} ntcard {params.options} -o {output.hist} {input.genome} &> {output.f_stats}"
+
+rule ntedit_genome_bf:
+    input:
+        ntcard_f_stats = f"{genome_base}.k{k}.tsv",
+        genome = genome
+    output:
+        f"{genome_base}_k{k}.bf"
+    params:
+        options = f"-k {k} -t {n_threads}",
+        benchmark = f"{time_command} make_bf_{genome_base}_k{k}.time"
+    run:
+        with open(input.ntcard_f_stats, 'r', encoding="utf8") as fin:
+            for line in fin:
+                _, f, num = line.strip().split("\t")
+                if f == "F0":
+                    num_elements = num
+                    break
+        shell("{params.benchmark} ntedit_make_genome_bf --genome {input.genome} {params.options} --num_elements {num_elements} -o {output}")
+
+
 # ---------------------------------------------------------
 # Build KORUS matrix
 # ---------------------------------------------------------
@@ -120,6 +162,29 @@ rule korus_matrix:
         korusMatrix.py \
             --bf_dir . \
             --sample {reads_prefix:q} \
+            --kmer_file {input.kmer_file} \
+            --output_matrix {output.matrix} \
+            --window_size {window_size} \
+            --k {k}
+        """
+
+rule korus_matrix_genome:
+    input:
+        bf = f"{genome_base}_k{k}.bf",
+        kmer_file = kmer_file
+
+    output:
+        matrix = f"{genome_base}_k{k}_t{window_size}_korus-matrix.tsv"
+
+    params:
+        benchmark = f"{time_command} korusMatrix_k{k}.time"
+
+    shell:
+        """
+        {params.benchmark} \
+        korusMatrix.py \
+            --bf_dir . \
+            --sample {genome_base:q} \
             --kmer_file {input.kmer_file} \
             --output_matrix {output.matrix} \
             --window_size {window_size} \

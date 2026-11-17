@@ -22,13 +22,17 @@ def set_up_parser():
     parser = argparse.ArgumentParser(
         description="korusEncode: build KORUS feature matrices from sequencing reads",
         formatter_class=argparse.RawTextHelpFormatter,
-        epilog="Input reads are identified using a shared prefix."
+        epilog="When --reads specified, input reads are identified using a shared prefix."
     )
 
     parser.add_argument(
         "--reads",
-        required=True,
         help="Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)"
+    )
+    
+    parser.add_argument(
+        "--genome",
+        help="Genome FASTA file"
     )
 
     parser.add_argument(
@@ -88,18 +92,25 @@ def main():
     args = parser.parse_args()
 
     if not os.path.isfile(args.kmer_file):
-        raise FileNotFoundError(
+        parser.error(
             f"k-mer definition file not found: {args.kmer_file}"
+        )
+        
+    if args.reads is None and args.genome is None:
+        parser.error(
+            "Either --reads or --genome must be specified."
+        )
+    if args.reads is not None and args.genome is not None:
+        parser.error(
+            "Only one of --reads or --genome can be specified."
         )
 
     base_dir = os.path.dirname(os.path.realpath(__file__))
 
-    reads_prefix = os.path.basename(args.reads)
-
     intro = [
         "Running korusEncode...",
         "Parameter settings:",
-        f"\t--reads {args.reads}",
+        f"\t--reads {args.reads}" if args.reads else f"\t--genome {args.genome}",
         f"\t--kmer_file {args.kmer_file}",
         f"\t-k {args.k}",
         f"\t--window_size {args.window_size}",
@@ -107,19 +118,27 @@ def main():
     ]
 
     print("\n".join(intro), flush=True)
+    
+    rule = "all"
+    if args.genome:
+        rule = "genome"
 
     command = (
         f"snakemake "
-        f"-s {base_dir}/korusEncode_pipeline.smk "
+        f"-s {base_dir}/korusEncode_pipeline.smk {rule} "
         f"--nolock -p "
         f"--cores {args.t} "
         f"--config "
-        f"reads={args.reads} "
         f"kmer_file={args.kmer_file} "
         f"kmer={args.k} "
         f"window_size={args.window_size} "
-        f"threads={args.t}"
+        f"threads={args.t} "
     )
+    
+    if args.reads:
+        command += f"reads={args.reads} "
+    elif args.genome:
+        command += f"genome={args.genome} "
 
     if version.parse(snakemake.__version__) >= version.parse("7.8.0"):
         command += " --rerun-trigger mtime"
