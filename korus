@@ -795,7 +795,7 @@ def main():
             f"-k {args.k} "
             f"--window_size {args.window} "
             f"-t {args.t} "
-            f"--prefix {args.outprefix}"
+            f"--prefix {matrix_prefix}"
         )
         
         encode_cmd += (
@@ -894,13 +894,13 @@ def main():
     if args.mode == "soft":
 
         pca_html = (
-            f"{args.outprefix}.fractions.pca3d.html"
+            f"{matrix_prefix}.fractions.pca3d.html"
         )
 
     else:
 
         pca_html = (
-            f"{args.outprefix}.pca3d.html"
+            f"{matrix_prefix}.pca3d.html"
         )
 
     # --------------------------------------------------
