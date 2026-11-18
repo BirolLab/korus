@@ -49,7 +49,8 @@ def set_up_parser():
     
     parser.add_argument(
         "--genome",
-        help="Input genome FASTA file"
+        nargs="+",
+        help="Input genome FASTA file(s)"
     )
 
     parser.add_argument(
@@ -772,8 +773,7 @@ def main():
     # Encode
     # --------------------------------------------------
 
-    matrix_prefix = os.path.basename(args.reads) \
-        if args.reads else os.path.basename(os.path.realpath(args.genome))
+    matrix_prefix = args.outprefix if args.reads else f"{args.outprefix}-genome"
 
     matrix_file = (
         f"{matrix_prefix}"
@@ -794,12 +794,13 @@ def main():
             f"--kmer_file {args.kmer_file} "
             f"-k {args.k} "
             f"--window_size {args.window} "
-            f"-t {args.t}"
+            f"-t {args.t} "
+            f"--prefix {args.outprefix}"
         )
         
         encode_cmd += (
             f" --reads {args.reads}"
-            if args.reads else f" --genome {args.genome}"
+            if args.reads else f" --genome {' '.join(args.genome)}"
         )
 
         run_command(encode_cmd, args.dry_run)

@@ -32,7 +32,14 @@ def set_up_parser():
     
     parser.add_argument(
         "--genome",
-        help="Genome FASTA file"
+        nargs="+",
+        help="Genome FASTA file(s)"
+    )
+    
+    parser.add_argument(
+        "--prefix",
+        required=False,
+        help="Prefix for output files [default --reads or --genome inputs concatenated]"
     )
 
     parser.add_argument(
@@ -114,10 +121,11 @@ def main():
         f"\t--kmer_file {args.kmer_file}",
         f"\t-k {args.k}",
         f"\t--window_size {args.window_size}",
-        f"\t-t {args.t}"
+        f"\t-t {args.t}",
+        f"\t--prefix {args.prefix}" if args.prefix else "",
     ]
 
-    print("\n".join(intro), flush=True)
+    print("\n".join(intro).strip(), flush=True)
     
     rule = "all"
     if args.genome:
@@ -138,7 +146,10 @@ def main():
     if args.reads:
         command += f"reads={args.reads} "
     elif args.genome:
-        command += f"genome={args.genome} "
+        command += f"genome=\"{args.genome}\" "
+        
+    if args.prefix:
+        command += f"prefix={args.prefix} "
 
     if version.parse(snakemake.__version__) >= version.parse("7.8.0"):
         command += " --rerun-trigger mtime"
