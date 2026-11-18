@@ -447,7 +447,13 @@ KORUS generates a standalone report that integrates PCA and LAI views into a uni
 
 ## Citing <a name="citing"></a>
 
-TBD 
+[Read our Preprint](https://doi.org/10.64898/2026.11.16.767070)
+```
+KORUS: probabilistic ancestry inference beyond variant calls
+Rene L Warren, Lauren Coombe, Inanc Birol
+bioRxiv 2026.11.16.767070; doi: https://doi.org/10.64898/2026.11.16.767070
+``` 
+
 
 ---
 
