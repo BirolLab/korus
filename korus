@@ -907,7 +907,8 @@ def main():
     # Locate LAI file
     # --------------------------------------------------
 
-    lai_tsv = f"{matrix_prefix}_{args.outprefix}.lai.tsv"
+    lai_tsv = f"{matrix_prefix}_{args.outprefix}.lai.tsv" if args.genome \
+        else f"{args.reads}_{args.outprefix}.lai.tsv"
 
     if not os.path.isfile(lai_tsv):
         raise RuntimeError("No LAI TSV produced.")
