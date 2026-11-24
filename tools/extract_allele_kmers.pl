@@ -174,12 +174,11 @@ sub apply_variant {
 # Flush site output
 # =========================================================
 sub flush_site {
+
     return unless defined $ref_kmer;
+    return unless %alt_seen;
 
-    #my $ref_can = canonical($ref_kmer);
-    my $ref_can = $ref_kmer;
-
-    print join("\t", $cur_chr, $cur_pos, "REF", $ref_can), "\n";
+    print join("\t", $cur_chr, $cur_pos, "REF", $ref_kmer), "\n";
 
     for my $alt_can (values %alt_seen) {
         print join("\t", $cur_chr, $cur_pos, "ALT", $alt_can), "\n";
@@ -248,8 +247,9 @@ while (<STDIN>) {
         my $alt_can = $alt_seq;
 
 	#$alt_seen{$a . "|" . $alt_can} = $alt_can;
-	
-	$alt_seen{$ref . ">" . $a . "|" . $alt_can} = $alt_can;
+	#$alt_seen{$ref . ">" . $a . "|" . $alt_can} = $alt_can;
+	next if $alt_seq eq $ref_kmer;
+	$alt_seen{$alt_seq} = $alt_seq;
     }
 }
 
