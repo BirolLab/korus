@@ -795,7 +795,7 @@ def main():
             f"-k {args.k} "
             f"--window_size {args.window} "
             f"-t {args.t} "
-            f"--prefix {matrix_prefix}"
+            f"--prefix {args.outprefix}"
         )
         
         encode_cmd += (
