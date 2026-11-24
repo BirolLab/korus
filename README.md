@@ -128,12 +128,7 @@ Performs probabilistic inference of ancestry from the feature matrix.
 ## Installation <a name="installation"></a>
 
 ```bash
-git clone https://github.com/birollab/korus.git
-cd korus
-# Ensure the KORUS repository is on your PATH
-export PATH="$PWD:$PATH"
-
-conda install -c conda-forge -c bioconda numpy pandas scikit-learn matplotlib plotly btllib 'ntroot>=1.2.2' snakemake ntcard ntstat
+conda install -c conda-forge -c bioconda korus
 ```
 
 ---
