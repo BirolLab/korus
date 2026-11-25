@@ -175,7 +175,7 @@ Input reference/query reads in FASTQ format
 
 ### Genome assembly (If using --genome)
 
-Input assembled genome in FASTA format (gzip-compatible)
+Input diploid assembled genome in FASTA format (gzip-compatible). KORUS is compatible with any genome assembly, but we recommend using a diploid genome for best results.
 
 ### SNV k-mer File
 See `tools/README` for instructions for generating this file from a VCF file.
@@ -222,7 +222,7 @@ options:
   -h, --help            show this help message and exit
   --reads READS         Input read prefix
   --genome GENOME [GENOME ...]
-                        Input genome FASTA file(s)
+                        Input diploid genome FASTA file(s)
   --report_mode {iframe,embed}
                         Report layout mode [default=iframe]
   --kmer_file KMER_FILE
@@ -260,7 +260,7 @@ korus --reads SAMPLE_PREFIX --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --m
 
 Example command when using an assembled genome:
 ```bash
-korus --genome genome.fasta --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
+korus --genome genome_hap1.fasta genome_hap2.fasta --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
 ```
 
 ---
@@ -277,7 +277,7 @@ options:
   -h, --help            show this help message and exit
   --reads READS         Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)
   --genome GENOME [GENOME ...]
-                        Genome FASTA file(s)
+                        Input diploid genome fasta file(s)
   --prefix PREFIX       Prefix for output files [default --reads or --genome inputs concatenated]
   --kmer_file KMER_FILE
                         SNV k-mer definition file used by korusMatrix.py
@@ -302,7 +302,7 @@ korusEncode \
 Example command if using an assembled genome, using a specified prefix:
 ```
 korusEncode \
-  --genome genome.fa \
+  --genome genome_hap1.fa genome_hap2.fa \
   --kmer_file snv_kmers.tsv -k 55 -t 48 \
   --prefix genome_korus
 ```

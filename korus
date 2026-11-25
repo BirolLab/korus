@@ -50,7 +50,7 @@ def set_up_parser():
     parser.add_argument(
         "--genome",
         nargs="+",
-        help="Input genome FASTA file(s)"
+        help="Input diploid genome FASTA file(s)"
     )
 
     parser.add_argument(
