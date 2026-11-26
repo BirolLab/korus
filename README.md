@@ -152,7 +152,7 @@ KORUS was developed and tested on:
 - Python >= 3.9
 - btllib >= 1.7
 - snakemake
-- ntCard >= 1.0.1
+- ntCard >= 1.1.0
 - ntStat
 - ntRoot >= 1.2.2
 

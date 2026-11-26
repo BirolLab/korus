@@ -838,7 +838,7 @@ def main():
         f"korusDecode.py "
         f"--ref {ref_model} "
         f"--sample {matrix_file} "
-        f"--outprefix {args.outprefix}"
+        f"--outprefix {matrix_prefix}"
     )
 
     decode_cmd += (
@@ -907,8 +907,8 @@ def main():
     # Locate LAI file
     # --------------------------------------------------
 
-    lai_tsv = f"{matrix_prefix}_{args.outprefix}.lai.tsv" if args.genome \
-        else f"{args.reads}_{args.outprefix}.lai.tsv"
+    lai_tsv = f"{matrix_prefix}_{matrix_prefix}.lai.tsv" if args.genome \
+        else f"{args.reads}_{matrix_prefix}.lai.tsv"
 
     if not os.path.isfile(lai_tsv):
         raise RuntimeError("No LAI TSV produced.")
@@ -949,7 +949,7 @@ def main():
         if args.report_mode == "iframe":
 
             write_iframe_report(
-                args.outprefix,
+                matrix_prefix,
                 args.report_title,
                 pca_html,
                 lai_html
@@ -958,7 +958,7 @@ def main():
         else:
 
             write_embedded_report(
-                args.outprefix,
+                matrix_prefix,
                 args.report_title,
                 pca_html,
                 lai_html
