@@ -1726,6 +1726,16 @@ def viterbi_smooth(pred_probs, classes, stay_prob=0.9):
     n_states = len(classes)
     n_steps = len(pred_probs)
 
+    # KORUS cannot perform meaningful supervised ancestry assignment with a reference panel containing only one ancestry/breed class. It needs multiple distinct reference classes, each represented by samples
+    if n_states == 0:
+        raise ValueError("Viterbi smoothing requires at least one ancestry class")
+
+    if n_steps == 0:
+        return np.array([])
+
+    if n_states == 1:
+        return np.full(n_steps, classes[0])
+
     # Transition matrix (log-space)
     # High probability of staying in same state, small probability of switching
     log_trans = np.full((n_states, n_states), np.log((1 - stay_prob) / (n_states - 1)))
