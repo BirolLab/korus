@@ -94,18 +94,18 @@ korus --genome HG02132_mat.chr20.fa.gz HG02132_pat.chr20.fa.gz \
     --kmer_file center_kmers.k55ivc.chr20.txt.gz -k 55 -t 4 \
     --mode hard --outprefix HG02132_korus --ref korusModelMatrixk55.chr20.tsv.gz
 
-python3 get_gai_labels.py HG02132_korus.lai_summary.tsv > HG02132_korus.gai_labels.txt
+python3 get_gai_labels.py HG02132_korus-genome.lai_summary.tsv > HG02132_korus-genome.gai_labels.txt
 
-gai=$(cat HG02132_korus.gai_labels.txt |cut -f2)
+gai=$(cat HG02132_korus-genome.gai_labels.txt |cut -f2)
 if [ "$gai" != "EAS" ]; then
     echo "Unexpected ancestry GAI for HG02132: $gai (expected: EAS) - please check your KORUS installation"
     exit 1
 fi
-rm HG02132_korus.gai_labels.txt
+rm HG02132_korus-genome.gai_labels.txt
 
 # 5: Running KORUS in genome mode (--soft), using previously built matrix
-korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus_k55_t500000_korus-matrix.tsv \
-    --fractions ../model/korusModelLabelsFractions.tsv.gz --outprefix HG02132_korus_soft -t 4
+korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus-genome_k55_t500000_korus-matrix.tsv \
+    --fractions ../model/korusModelLabelsFractions.tsv.gz --outprefix HG02132_korus_soft
 
 python3 get_gai_labels.py HG02132_korus_soft.lai_summary.tsv > HG02132_korus_soft.gai_labels.txt
 
@@ -117,7 +117,7 @@ fi
 rm HG02132_korus_soft.gai_labels.txt
 
 # 6: Running KORUS in genome mode (unsupervised) - only to check for runtime errors
-korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus_k55_t500000_korus-matrix.tsv \
-    --outprefix HG02132_korus_unsupervised -t 4
+korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus-genome_k55_t500000_korus-matrix.tsv \
+    --outprefix HG02132_korus_unsupervised
 
 echo "KORUS demo completed successfully!"
