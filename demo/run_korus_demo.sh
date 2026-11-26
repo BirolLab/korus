@@ -25,7 +25,7 @@ if [ ! -f "center_kmers.k55ivc.chr22.txt.gz" ]; then
     curl -O https://zenodo.org/records/24564514/files/center_kmers.k55ivc.chr22.txt.gz
 fi
 
-if [ $! -f "center_kmers.k55ivc.chr20.txt.gz" ]; then
+if [ ! -f "center_kmers.k55ivc.chr20.txt.gz" ]; then
     curl -O https://zenodo.org/records/24564514/files/center_kmers.k55ivc.chr20.txt.gz
 fi
 
