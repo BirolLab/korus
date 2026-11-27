@@ -44,8 +44,13 @@ def set_up_parser():
 
     parser.add_argument(
         "--reads",
-        required=True,
         help="Input read prefix"
+    )
+    
+    parser.add_argument(
+        "--genome",
+        nargs="+",
+        help="Input diploid genome FASTA file(s)"
     )
 
     parser.add_argument(
@@ -686,7 +691,13 @@ def normalize_plot_ids(html):
 #-----------------------------
 def main():
 
-    args = set_up_parser().parse_args()
+    parser = set_up_parser()
+    args = parser.parse_args()
+    
+    if args.reads is None and args.genome is None:
+        parser.error("Either --reads or --genome must be specified.")
+    if args.reads is not None and args.genome is not None:
+        parser.error("Only one of --reads or --genome can be specified.")
 
     base_dir = os.path.dirname(
         os.path.realpath(__file__)
@@ -762,12 +773,10 @@ def main():
     # Encode
     # --------------------------------------------------
 
-    reads_prefix = os.path.basename(
-        args.reads
-    )
+    matrix_prefix = args.outprefix if args.reads else f"{args.outprefix}-genome"
 
     matrix_file = (
-        f"{reads_prefix}"
+        f"{matrix_prefix}"
         f"_k{args.k}"
         f"_t{args.window}"
         f"_korus-matrix.tsv"
@@ -782,11 +791,16 @@ def main():
         print("[checkpoint] Matrix missing or invalid, running encode")
         encode_cmd = (
             f"korusEncode "
-            f"--reads {args.reads} "
             f"--kmer_file {args.kmer_file} "
             f"-k {args.k} "
             f"--window_size {args.window} "
-            f"-t {args.t}"
+            f"-t {args.t} "
+            f"--prefix {args.outprefix}"
+        )
+        
+        encode_cmd += (
+            f" --reads {args.reads}"
+            if args.reads else f" --genome {' '.join(args.genome)}"
         )
 
         run_command(encode_cmd, args.dry_run)
@@ -824,7 +838,7 @@ def main():
         f"korusDecode.py "
         f"--ref {ref_model} "
         f"--sample {matrix_file} "
-        f"--outprefix {args.outprefix}"
+        f"--outprefix {matrix_prefix}"
     )
 
     decode_cmd += (
@@ -880,21 +894,21 @@ def main():
     if args.mode == "soft":
 
         pca_html = (
-            f"{args.outprefix}.fractions.pca3d.html"
+            f"{matrix_prefix}.fractions.pca3d.html"
         )
 
     else:
 
         pca_html = (
-            f"{args.outprefix}.pca3d.html"
+            f"{matrix_prefix}.pca3d.html"
         )
 
     # --------------------------------------------------
     # Locate LAI file
     # --------------------------------------------------
 
-    sample_name = os.path.basename(args.reads)
-    lai_tsv = f"{sample_name}_{args.outprefix}.lai.tsv"
+    lai_tsv = f"{matrix_prefix}_{matrix_prefix}.lai.tsv" if args.genome \
+        else f"{args.reads}_{matrix_prefix}.lai.tsv"
 
     if not os.path.isfile(lai_tsv):
         raise RuntimeError("No LAI TSV produced.")
@@ -935,7 +949,7 @@ def main():
         if args.report_mode == "iframe":
 
             write_iframe_report(
-                args.outprefix,
+                matrix_prefix,
                 args.report_title,
                 pca_html,
                 lai_html
@@ -944,7 +958,7 @@ def main():
         else:
 
             write_embedded_report(
-                args.outprefix,
+                matrix_prefix,
                 args.report_title,
                 pca_html,
                 lai_html

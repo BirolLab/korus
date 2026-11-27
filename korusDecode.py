@@ -2111,8 +2111,8 @@ def main():
     frac_out = args.outprefix + ".fractions.tsv"
     prob_out = args.outprefix + ".probabilities.tsv"
 
-    frac_df.to_csv(frac_out, sep="\t")
-    prob_df.to_csv(prob_out, sep="\t")
+    frac_df.to_csv(frac_out, sep="\t", index_label="sample")
+    prob_df.to_csv(prob_out, sep="\t", index_label="sample")
 
     print(f"\tWriting fractions to: {frac_out}")
     print(f"\tWriting probabilities to: {prob_out}")

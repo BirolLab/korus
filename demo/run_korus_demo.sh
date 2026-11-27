@@ -6,22 +6,38 @@ set -eux -o pipefail
 # Prep - download required files using curl if not present in working directory
 
 if [ ! -f "ERR3240246.grch38.aln.chr22.fq.gz" ]; then
-    curl -O https://zenodo.org/records/23964981/files/ERR3240246.grch38.aln.chr22.fq.gz
+    curl -O https://zenodo.org/records/24564514/files/ERR3240246.grch38.aln.chr22.fq.gz
 fi
 
 if [ ! -f "ERR3242841.grch38.aln.chr22.fq.gz" ]; then
-    curl -O https://zenodo.org/records/23964981/files/ERR3242841.grch38.aln.chr22.fq.gz
+    curl -O https://zenodo.org/records/24564514/files/ERR3242841.grch38.aln.chr22.fq.gz
+fi
+
+if [ ! -f "HG02132_mat.chr20.fa.gz" ]; then
+    curl -O https://zenodo.org/records/24564514/files/HG02132_mat.chr20.fa.gz
+fi
+
+if [ ! -f "HG02132_pat.chr20.fa.gz" ]; then
+    curl -O https://zenodo.org/records/24564514/files/HG02132_pat.chr20.fa.gz
 fi
 
 if [ ! -f "center_kmers.k55ivc.chr22.txt.gz" ]; then
-    curl -O https://zenodo.org/records/23964981/files/center_kmers.k55ivc.chr22.txt.gz
+    curl -O https://zenodo.org/records/24564514/files/center_kmers.k55ivc.chr22.txt.gz
+fi
+
+if [ ! -f "center_kmers.k55ivc.chr20.txt.gz" ]; then
+    curl -O https://zenodo.org/records/24564514/files/center_kmers.k55ivc.chr20.txt.gz
 fi
 
 if [ ! -f "korusModelMatrixk55.chr22.tsv.gz" ]; then
-    curl -O https://zenodo.org/records/23964981/files/korusModelMatrixk55.chr22.tsv.gz
+    curl -O https://zenodo.org/records/24564514/files/korusModelMatrixk55.chr22.tsv.gz
 fi
 
-# 1: Running single sample using korus driver script (--mode hard)
+if [ ! -f "korusModelMatrixk55.chr20.tsv.gz" ]; then
+    curl -O https://zenodo.org/records/24564514/files/korusModelMatrixk55.chr20.tsv.gz
+fi
+
+# 1: Running single reads sample using korus driver script (--mode hard)
 
 korus --reads ERR3240246.grch38.aln.chr22 --kmer_file center_kmers.k55ivc.chr22.txt.gz \
     -k 55 --outprefix ERR3240246_chr22_korus --mode hard --ref korusModelMatrixk55.chr22.tsv.gz
@@ -35,7 +51,7 @@ if [ "$gai" != "EUR" ]; then
 fi
 rm ERR3240246_chr22_korus.gai_labels.txt
 
-# 2: Running KORUS using multiple samples (--mode soft)
+# 2: Running KORUS using multiple reads samples (--mode soft)
  
 # a. Run korusEncode
 korusEncode --reads ERR3240246.grch38.aln.chr22 --kmer_file center_kmers.k55ivc.chr22.txt.gz -k 55 -t4
@@ -72,5 +88,36 @@ korusDecode.py --ref korusModelMatrixk55.chr22.tsv.gz \
     --outprefix multi-sample.korus_unsupervised
 
 rm multi-sample.korus_unsupervised*
+
+# 4: Running KORUS in genome mode (--hard mode)
+korus --genome HG02132_mat.chr20.fa.gz HG02132_pat.chr20.fa.gz \
+    --kmer_file center_kmers.k55ivc.chr20.txt.gz -k 55 -t 4 \
+    --mode hard --outprefix HG02132_korus --ref korusModelMatrixk55.chr20.tsv.gz
+
+python3 get_gai_labels.py HG02132_korus-genome.lai_summary.tsv > HG02132_korus-genome.gai_labels.txt
+
+gai=$(cat HG02132_korus-genome.gai_labels.txt |cut -f2)
+if [ "$gai" != "EAS" ]; then
+    echo "Unexpected ancestry GAI for HG02132: $gai (expected: EAS) - please check your KORUS installation"
+    exit 1
+fi
+rm HG02132_korus-genome.gai_labels.txt
+
+# 5: Running KORUS in genome mode (--soft), using previously built matrix
+korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus-genome_k55_t500000_korus-matrix.tsv \
+    --fractions ../model/korusModelLabelsFractions.tsv.gz --outprefix HG02132_korus_soft
+
+python3 get_gai_labels.py HG02132_korus_soft.lai_summary.tsv > HG02132_korus_soft.gai_labels.txt
+
+gai=$(cat HG02132_korus_soft.gai_labels.txt |cut -f2)
+if [ "$gai" != "EAS" ]; then
+    echo "Unexpected ancestry GAI for HG02132: $gai (expected: EAS) - please check your KORUS installation"
+    exit 1
+fi
+rm HG02132_korus_soft.gai_labels.txt
+
+# 6: Running KORUS in genome mode (unsupervised) - only to check for runtime errors
+korusDecode.py --ref korusModelMatrixk55.chr20.tsv.gz --sample HG02132_korus-genome_k55_t500000_korus-matrix.tsv \
+    --outprefix HG02132_korus_unsupervised
 
 echo "KORUS demo completed successfully!"

@@ -39,7 +39,7 @@ Feature Matrix → Probabilistic Decoding Framework for Genomic Ancestry Inferen
 
 ## Overview <a name="overview"></a><a name="synopsis"></a>
 
-KORUS is a two-stage computational framework for ancestry inference from sequencing data using k-mer–derived genomic features encoded in Bloom filters.
+KORUS is a two-stage computational framework for ancestry inference from sequencing data (sequencing reads or assembled genomes) using k-mer–derived genomic features encoded in Bloom filters.
 
 Rather than relying on alignment or variant calling, KORUS transforms sequencing data into a structured genomic feature space and performs probabilistic decoding to infer ancestry structure across the genome.
 
@@ -147,8 +147,10 @@ KORUS was developed and tested on:
 - Python >= 3.9
 - btllib >= 1.7
 - snakemake
-- ntCard >= 1.0.1
+- ntCard >= 1.1.0
 - ntStat
+- ntRoot >= 1.2.2
+
 
 ### Python packages
 - numpy
@@ -158,15 +160,17 @@ KORUS was developed and tested on:
 - plotly
 - packaging
 
-### Optional (needed for `korus`)
-- ntRoot >= 1.2.2
 
 ---
 ## Input Files <a name="inputs"></a>
 
-### Reads
+### Reads (If using --reads)
 
 Input reference/query reads in FASTQ format
+
+### Genome assembly (If using --genome)
+
+Input diploid assembled genome in FASTA format (gzip-compatible). KORUS is compatible with any genome assembly, but we recommend using a diploid genome for best results.
 
 ### SNV k-mer File
 See `tools/README` for instructions for generating this file from a VCF file.
@@ -202,16 +206,18 @@ ERR2	 0.0718	0.0298	0.5814	0.2347	0.0823
 KORUS provides a single-entry driver script to run all steps in the pipeline for a single query sample:
 
 ```
-usage: korus [-h] --reads READS [--report_mode {iframe,embed}] --kmer_file KMER_FILE -k {45,55}
-             [--window WINDOW] [-t T] [--mode {hard,soft,unsupervised}] [--c C] [--global_pcs GLOBAL_PCS]
-             [--local_pcs LOCAL_PCS] [--window_radius WINDOW_RADIUS] [--stay_prob STAY_PROB] [--no_hmm]
-             --outprefix OUTPREFIX [--report_title REPORT_TITLE] [-n] [-V] [--ref REF] [--labels LABELS]
+usage: korus [-h] [--reads READS] [--genome GENOME [GENOME ...]] [--report_mode {iframe,embed}] --kmer_file KMER_FILE -k {45,55} [--window WINDOW] [-t T]
+             [--mode {hard,soft,unsupervised}] [--c C] [--global_pcs GLOBAL_PCS] [--local_pcs LOCAL_PCS] [--window_radius WINDOW_RADIUS]
+             [--stay_prob STAY_PROB] [--no_hmm] --outprefix OUTPREFIX [--report_title REPORT_TITLE] [-n] [-V] [--ref REF] [--labels LABELS]
              [--fractions FRACTIONS]
+
 End-to-end KORUS ancestry inference pipeline
 
 options:
   -h, --help            show this help message and exit
   --reads READS         Input read prefix
+  --genome GENOME [GENOME ...]
+                        Input diploid genome FASTA file(s)
   --report_mode {iframe,embed}
                         Report layout mode [default=iframe]
   --kmer_file KMER_FILE
@@ -242,23 +248,32 @@ options:
   --fractions FRACTIONS
                         Override bundled soft-supervised fractions
 ```
-Example command:
+Example command when using reads:
 ```bash
 korus --reads SAMPLE_PREFIX --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
+```
+
+Example command when using an assembled genome:
+```bash
+korus --genome genome_hap1.fasta genome_hap2.fasta --kmer_file snv_kmers.tsv -k 55 --outprefix run1 --mode hard
 ```
 
 ---
 ## Advanced usage: Generating a custom reference matrix with KORUS
 
-1. Run `korusEncode` for all input reference samples - runs `ntCard`, `ntStat` and `korusMatrix.py`
+1. Run `korusEncode` for all input reference samples - generates a Bloom filter and creates a matrix using `korusMatrix.py`
 ```bash
-usage: korusEncode [-h] --reads READS --kmer_file KMER_FILE -k K [--window_size WINDOW_SIZE] [-t T] [-n] [-f] [-V]
+usage: korusEncode [-h] [--reads READS] [--genome GENOME [GENOME ...]] [--prefix PREFIX] --kmer_file KMER_FILE -k K [--window_size WINDOW_SIZE] [-t T] [-n] [-f]
+                   [-V]
 
 korusEncode: build KORUS feature matrices from sequencing reads
 
 options:
   -h, --help            show this help message and exit
   --reads READS         Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)
+  --genome GENOME [GENOME ...]
+                        Input diploid genome fasta file(s)
+  --prefix PREFIX       Prefix for output files [default --reads or --genome inputs concatenated]
   --kmer_file KMER_FILE
                         SNV k-mer definition file used by korusMatrix.py
   -k K                  k-mer size
@@ -269,14 +284,22 @@ options:
   -f, --force           Force rerun of all rules
   -V, --version         show program's version number and exit
 
-Input reads are identified using a shared prefix.
+When --reads specified, input reads are identified using a shared prefix.
 ```
 
-Example command:
+Example command if using reads:
 ```
 korusEncode \
   --reads SAMPLE_PREFIX (Prefix of input read files (FASTQ/FASTA/gz/bz2 compatible)) \
   --kmer_file snv_kmers.tsv -k 55 -t 48
+```
+
+Example command if using an assembled genome, using a specified prefix:
+```
+korusEncode \
+  --genome genome_hap1.fa genome_hap2.fa \
+  --kmer_file snv_kmers.tsv -k 55 -t 48 \
+  --prefix genome_korus
 ```
 
 2. Combine all reference matrices to one single reference matrix
@@ -319,8 +342,9 @@ While the `korus` script can be used to run all steps using a single sample, the
 
 2. Run `korusDecode.py` to generate ancestry fraction predictions for each input sample
 ```bash
-usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C] --outprefix OUTPREFIX [--window_radius WINDOW_RADIUS]
-                      [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [--global_pcs GLOBAL_PCS] [--local_pcs LOCAL_PCS] [-V]
+usage: korusDecode.py [-h] --ref REF --sample SAMPLE [--labels LABELS] [--fractions FRACTIONS] [--c C] --outprefix OUTPREFIX
+                      [--window_radius WINDOW_RADIUS] [--require_full_window] [--stay_prob STAY_PROB] [--no_hmm] [--global_pcs GLOBAL_PCS]
+                      [--local_pcs LOCAL_PCS] [-V]
 
 Ancestry inference with PCA + Mahalanobis window assignment
 
